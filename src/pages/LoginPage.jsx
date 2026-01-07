@@ -35,13 +35,18 @@ export default function LoginPage() {
 
   return (
     <div className="login-page">
-      <div className="login-modal login--split" role="dialog">
-        <div className="login-visual">
+      <div
+        className="login-modal login--split"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="loginTitle"
+      >
+        <div className="login-visual" aria-hidden="true">
           <img src={SignInArt} alt="Travista sign-in illustration" />
         </div>
 
         <div className="login-content">
-          <h2>Welcome to Travista</h2>
+          <h2 id="loginTitle">Welcome to Travista</h2>
 
           <label style={{ fontSize: 12, color: "#777" }}>Email</label>
           <input
@@ -62,17 +67,30 @@ export default function LoginPage() {
             <button
               type="button"
               className="toggle-visibility"
-              onClick={() => setShowPwd(v => !v)}
+              aria-label={showPwd ? "Hide password" : "Show password"}
+              onClick={() => setShowPwd((v) => !v)}
             >
               {showPwd ? <MdVisibilityOff /> : <MdVisibility />}
             </button>
           </div>
 
+          <p
+            style={{
+              textAlign: "right",
+              marginTop: "6px",
+              fontSize: "14px",
+              textDecoration: "underline",
+              color: "#4caf50",
+              cursor: "pointer",
+            }}
+          >
+            Forgot password?
+          </p>
+
           <button className="login-primary" onClick={handleLogin}>
             Login
           </button>
 
-          {/* 🔴 Centered error text */}
           {error && (
             <p
               style={{
@@ -86,7 +104,10 @@ export default function LoginPage() {
             </p>
           )}
 
-          <div className="login-or"><span>or</span></div>
+          <div className="login-or">
+            <span>or</span>
+          </div>
+
           <button className="login-google">Sign in with Google</button>
 
           <p className="login-footer">

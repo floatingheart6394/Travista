@@ -35,7 +35,6 @@ export default function SignupPage() {
       if (response.ok) {
         navigate("/login");
       } else {
-        // backend sends "User already exists"
         setError("User already exists");
       }
     } catch (err) {
@@ -102,7 +101,6 @@ export default function SignupPage() {
             Create Account
           </button>
 
-          {/* 🔴 Centered error text */}
           {error && (
             <p
               style={{
