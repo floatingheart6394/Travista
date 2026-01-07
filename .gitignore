@@ -14,3 +14,7 @@ pnpm-debug.log*
 # Editor
 .vscode/
 .DS_Store
+
+# Python cache
+__pycache__/
+*.pyc
