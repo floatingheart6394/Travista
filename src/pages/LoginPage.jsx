@@ -13,25 +13,33 @@ export default function LoginPage() {
   const navigate = useNavigate();
 
   const handleLogin = async () => {
-    setError("");
+  setError("");
 
-    try {
-      const response = await fetch("http://localhost:8000/auth/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password }),
-      });
+  try {
+    const response = await fetch("http://localhost:8000/auth/login", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, password }),
+    });
 
-      if (response.ok) {
-        navigate("/");
-      } else {
-        setError("Invalid email or password");
-      }
-    } catch (err) {
-      console.error(err);
-      setError("Server error. Please try again.");
+    const data = await response.json();
+
+    if (!response.ok) {
+      setError(data.detail || "Invalid email or password");
+      return;
     }
-  };
+
+    // ✅ STORE JWT TOKEN
+    localStorage.setItem("access_token", data.access_token);
+
+    // ✅ Redirect to home (or dashboard later)
+    navigate("/");
+  } catch (err) {
+    console.error(err);
+    setError("Server error. Please try again.");
+  }
+};
+
 
   return (
     <div className="login-page">

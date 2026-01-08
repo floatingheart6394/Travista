@@ -6,6 +6,8 @@ from app.database import get_db
 from app.models.user import User
 from app.schemas.user import SignupRequest, LoginRequest
 from app.core.security import hash_password, verify_password
+from app.core.jwt import create_access_token
+from app.core.security import verify_password
 
 router = APIRouter(
     prefix="/auth",
@@ -46,5 +48,13 @@ async def login(user: LoginRequest, db: AsyncSession = Depends(get_db)):
     ):
         raise HTTPException(status_code=401, detail="Invalid email or password")
 
-    return {"message": "Login successful"}
+    access_token = create_access_token(
+        data={"sub": str(existing_user.id)}
+    )
+
+    return {
+        "access_token": access_token,
+        "token_type": "bearer"
+    }
+
 

@@ -3,6 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.database import engine, Base
 from app.routes import auth
+from app.routes import users
 
 app = FastAPI(title="Travista Backend")
 
@@ -20,6 +21,7 @@ async def startup():
         await conn.run_sync(Base.metadata.create_all)
 
 app.include_router(auth.router)
+app.include_router(users.router)
 
 @app.get("/")
 async def root():
