@@ -11,7 +11,7 @@ export default function Navbar() {
         <a href="#budget" data-cursor-big="true">Budget</a>
         <a data-cursor-big="true">Play</a>
         <a data-cursor-big="true">Community</a>
-        <a data-cursor-big="true">AI Assistant</a>
+        <a data-cursor-big="true" onClick={() => navigate('/ai')}>AI Assistant</a>
         <button className="login-btn" onClick={() => navigate('/login')}>Login / Sign up</button>
       </div>
     </nav>
