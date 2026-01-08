@@ -15,7 +15,17 @@ import EmergencyPage from "./pages/EmergencyPage";
 
 function AppInner() {
   const location = useLocation();
-  const hideNavbarPaths = ["/login", "/signup", "/dashboard", "/budget", "/planner", "/ai", "/game", "/emergency", "/todo"]; 
+  const hideNavbarPaths = [
+    "/login",
+    "/signup",
+    "/dashboard",
+    "/budget",
+    "/planner",
+    "/ai",
+    "/game",
+    "/emergency",
+    "/todo",
+  ];
   const showNavbar = !hideNavbarPaths.includes(location.pathname);
   useEffect(() => {
     const cls = "no-navbar";

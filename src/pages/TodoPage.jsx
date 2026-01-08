@@ -1,6 +1,14 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import NewNavbar from "../components/NewNavbar";
-import { FiPlus, FiTrash2, FiCheck, FiFilter, FiClipboard, FiStar, FiHome } from "react-icons/fi";
+import {
+  FiPlus,
+  FiTrash2,
+  FiCheck,
+  FiFilter,
+  FiClipboard,
+  FiStar,
+  FiHome,
+} from "react-icons/fi";
 import { FaStar } from "react-icons/fa";
 
 const LS_KEY = "travista_todos";
@@ -28,11 +36,33 @@ export default function TodoPage() {
     try {
       const raw = localStorage.getItem(LS_KEY);
       if (raw) setItems(JSON.parse(raw));
-      else setItems([
-        { id: 1, text: "Book flights to Rome", category: "Booking", group: "Before Trip", done: false, priority: "High" },
-        { id: 2, text: "Renew passport", category: "Documents", group: "Before Trip", done: true, priority: "Medium" },
-        { id: 3, text: "Add emergency contacts", category: "Other", group: "Before Trip", done: false, priority: "Low" },
-      ]);
+      else
+        setItems([
+          {
+            id: 1,
+            text: "Book flights to Rome",
+            category: "Booking",
+            group: "Before Trip",
+            done: false,
+            priority: "High",
+          },
+          {
+            id: 2,
+            text: "Renew passport",
+            category: "Documents",
+            group: "Before Trip",
+            done: true,
+            priority: "Medium",
+          },
+          {
+            id: 3,
+            text: "Add emergency contacts",
+            category: "Other",
+            group: "Before Trip",
+            done: false,
+            priority: "Low",
+          },
+        ]);
     } catch {}
   }, []);
 
@@ -86,30 +116,59 @@ export default function TodoPage() {
     if (mDate && mRemTime) {
       remindAt = new Date(`${mDate}T${mRemTime}`).toISOString();
     }
-    const payload = { id: Date.now(), text: t, desc: mDesc || undefined, category: mCategory, group: mGroup, priority: mPriority, due: dueISO, remindAt, done: false, important: false };
+    const payload = {
+      id: Date.now(),
+      text: t,
+      desc: mDesc || undefined,
+      category: mCategory,
+      group: mGroup,
+      priority: mPriority,
+      due: dueISO,
+      remindAt,
+      done: false,
+      important: false,
+    };
     setItems((prev) => [payload, ...prev]);
     setCreateOpen(false);
-    setMText(""); setMDesc(""); setMDate(""); setMRemTime(""); setMGroup("Before Trip"); setMPriority("Medium"); setMCategory("Other");
+    setMText("");
+    setMDesc("");
+    setMDate("");
+    setMRemTime("");
+    setMGroup("Before Trip");
+    setMPriority("Medium");
+    setMCategory("Other");
   };
 
-  const toggle = (id) => setItems((prev) => prev.map((it) => (it.id === id ? { ...it, done: !it.done } : it)));
-  const toggleImportant = (id) => setItems((prev) => prev.map((it) => (it.id === id ? { ...it, important: !it.important } : it)));
+  const toggle = (id) =>
+    setItems((prev) =>
+      prev.map((it) => (it.id === id ? { ...it, done: !it.done } : it))
+    );
+  const toggleImportant = (id) =>
+    setItems((prev) =>
+      prev.map((it) =>
+        it.id === id ? { ...it, important: !it.important } : it
+      )
+    );
   const remove = (id) => setItems((prev) => prev.filter((it) => it.id !== id));
-  const clearCompleted = () => setItems((prev) => prev.filter((it) => !it.done));
+  const clearCompleted = () =>
+    setItems((prev) => prev.filter((it) => !it.done));
 
   const shown = useMemo(() => {
     let arr = items;
     if (filter === "active") arr = arr.filter((i) => !i.done);
     if (filter === "completed") arr = arr.filter((i) => i.done);
-    if (["Before Trip","During Trip","After Trip"].includes(side)) arr = arr.filter(i=> i.group === side);
-    if (side === "Completed") arr = arr.filter(i=> i.done);
-    if (side === "Important") arr = arr.filter(i=> i.important);
+    if (["Before Trip", "During Trip", "After Trip"].includes(side))
+      arr = arr.filter((i) => i.group === side);
+    if (side === "Completed") arr = arr.filter((i) => i.done);
+    if (side === "Important") arr = arr.filter((i) => i.important);
     return arr;
   }, [items, filter, side]);
 
   const remaining = items.filter((i) => !i.done).length;
   const completed = items.length - remaining;
-  const percent = items.length ? Math.round((completed / items.length) * 100) : 0;
+  const percent = items.length
+    ? Math.round((completed / items.length) * 100)
+    : 0;
 
   // Grouped views
   const byGroup = useMemo(() => {
@@ -120,7 +179,9 @@ export default function TodoPage() {
     return base;
   }, [shown]);
   const visibleGroups = useMemo(() => {
-    return ["Before Trip","During Trip","After Trip"].includes(side) ? [side] : GROUPS;
+    return ["Before Trip", "During Trip", "After Trip"].includes(side)
+      ? [side]
+      : GROUPS;
   }, [side]);
 
   // AI suggestions removed
@@ -131,156 +192,313 @@ export default function TodoPage() {
       <main className="dashboard-content">
         <div className="todo-layout">
           <aside className="todo-sidebar">
-            <button className="s-create" onClick={()=>setCreateOpen(true)}><FiPlus /> Create</button>
+            <button className="s-create" onClick={() => setCreateOpen(true)}>
+              <FiPlus /> Create
+            </button>
             <nav className="snav">
-              <button className={`sitem ${side==='All tasks'?'active':''}`} onClick={()=>setSide('All tasks')}>
-                <FiHome /><span>Tasks</span>
+              <button
+                className={`sitem ${side === "All tasks" ? "active" : ""}`}
+                onClick={() => setSide("All tasks")}
+              >
+                <FiHome />
+                <span>Tasks</span>
                 <span className="count">{items.length}</span>
               </button>
-              <button className={`sitem ${side==='Important'?'active':''}`} onClick={()=>setSide('Important')}>
-                <FiStar /><span>Important</span>
-                <span className="count">{items.filter(i=>i.important).length}</span>
+              <button
+                className={`sitem ${side === "Important" ? "active" : ""}`}
+                onClick={() => setSide("Important")}
+              >
+                <FiStar />
+                <span>Important</span>
+                <span className="count">
+                  {items.filter((i) => i.important).length}
+                </span>
               </button>
             </nav>
             <div className="list-section">
               <h5>Lists</h5>
-              <button className={`sitem ${side==='All tasks'?'active':''}`} onClick={()=>setSide('All tasks')}>
+              <button
+                className={`sitem ${side === "All tasks" ? "active" : ""}`}
+                onClick={() => setSide("All tasks")}
+              >
                 <span>All tasks</span>
                 <span className="count">{items.length}</span>
               </button>
-              {GROUPS.map(g => (
-                <button key={g} className={`sitem ${side===g?'active':''}`} onClick={()=>setSide(g)}>
+              {GROUPS.map((g) => (
+                <button
+                  key={g}
+                  className={`sitem ${side === g ? "active" : ""}`}
+                  onClick={() => setSide(g)}
+                >
                   <span>{g}</span>
-                  <span className="count">{items.filter(i=>i.group===g).length}</span>
+                  <span className="count">
+                    {items.filter((i) => i.group === g).length}
+                  </span>
                 </button>
               ))}
-              <button className={`sitem ${side==='Completed'?'active':''}`} onClick={()=>setSide('Completed')}>
+              <button
+                className={`sitem ${side === "Completed" ? "active" : ""}`}
+                onClick={() => setSide("Completed")}
+              >
                 <span>Completed</span>
-                <span className="count">{items.filter(i=>i.done).length}</span>
+                <span className="count">
+                  {items.filter((i) => i.done).length}
+                </span>
               </button>
             </div>
           </aside>
           <div className="todo-wrap">
-          <div className="todo-top">
-            {/* Progress card */}
-            <div className="todo-progress card-lite">
-              <div className="tp-head"><FiClipboard /><span>Progress</span></div>
-              <div className="tp-sub">{completed} of {items.length} tasks completed</div>
-              <div className="tp-bar"><span style={{ width: `${percent}%` }} /></div>
-            </div>
-
-            {/* Filters / tools */}
-            <section className="todo-toolbar card-lite">
-              <div className="filters">
-                <button className={`pill ${filter === "all" ? "active" : ""}`} onClick={() => setFilter("all")}>All</button>
-                <button className={`pill ${filter === "active" ? "active" : ""}`} onClick={() => setFilter("active")}>Active</button>
-                <button className={`pill ${filter === "completed" ? "active" : ""}`} onClick={() => setFilter("completed")}>Completed</button>
-              </div>
-              <div className="tools">
-                <button className="outline" onClick={clearCompleted}><FiFilter /> Clear Completed</button>
-                <div className="toggle-view">
-                  <button className={`pill ${view==='board'?'active':''}`} onClick={()=>setView('board')}>Board</button>
-                  <button className={`pill ${view==='list'?'active':''}`} onClick={()=>setView('list')}>List</button>
+            <div className="todo-top">
+              {/* Progress card */}
+              <div className="todo-progress card-lite">
+                <div className="tp-head">
+                  <FiClipboard />
+                  <span>Progress</span>
+                </div>
+                <div className="tp-sub">
+                  {completed} of {items.length} tasks completed
+                </div>
+                <div className="tp-bar">
+                  <span style={{ width: `${percent}%` }} />
                 </div>
               </div>
-            </section>
-          </div>
 
-          {view === 'board' ? (
-            <section className={`todo-board ${visibleGroups.length===1 ? 'single' : ''}`}>
-              {visibleGroups.map((g)=> (
-                <div key={g} className="board-col">
-                  <div className="board-head">{g}</div>
-                  <div className="board-list">
-                    {(byGroup[g]||[]).length === 0 && (
-                      <div className="empty small">No tasks yet</div>
-                    )}
-                    {(byGroup[g]||[]).map((it) => (
-                      <article key={it.id} className={`bcard ${it.done ? 'done':''}`}>
-                        <button className={`check ${it.done ? 'checked' : ''}`} onClick={() => toggle(it.id)} aria-label={it.done ? 'Mark as not done' : 'Mark as done'}>
+              {/* Filters / tools */}
+              <section className="todo-toolbar card-lite">
+                <div className="filters">
+                  <button
+                    className={`pill ${filter === "all" ? "active" : ""}`}
+                    onClick={() => setFilter("all")}
+                  >
+                    All
+                  </button>
+                  <button
+                    className={`pill ${filter === "active" ? "active" : ""}`}
+                    onClick={() => setFilter("active")}
+                  >
+                    Active
+                  </button>
+                  <button
+                    className={`pill ${filter === "completed" ? "active" : ""}`}
+                    onClick={() => setFilter("completed")}
+                  >
+                    Completed
+                  </button>
+                </div>
+                <div className="tools">
+                  <button className="outline" onClick={clearCompleted}>
+                    <FiFilter /> Clear Completed
+                  </button>
+                  <div className="toggle-view">
+                    <button
+                      className={`pill ${view === "board" ? "active" : ""}`}
+                      onClick={() => setView("board")}
+                    >
+                      Board
+                    </button>
+                    <button
+                      className={`pill ${view === "list" ? "active" : ""}`}
+                      onClick={() => setView("list")}
+                    >
+                      List
+                    </button>
+                  </div>
+                </div>
+              </section>
+            </div>
+
+            {view === "board" ? (
+              <section
+                className={`todo-board ${
+                  visibleGroups.length === 1 ? "single" : ""
+                }`}
+              >
+                {visibleGroups.map((g) => (
+                  <div key={g} className="board-col">
+                    <div className="board-head">{g}</div>
+                    <div className="board-list">
+                      {(byGroup[g] || []).length === 0 && (
+                        <div className="empty small">No tasks yet</div>
+                      )}
+                      {(byGroup[g] || []).map((it) => (
+                        <article
+                          key={it.id}
+                          className={`bcard ${it.done ? "done" : ""}`}
+                        >
+                          <button
+                            className={`check ${it.done ? "checked" : ""}`}
+                            onClick={() => toggle(it.id)}
+                            aria-label={
+                              it.done ? "Mark as not done" : "Mark as done"
+                            }
+                          >
+                            <FiCheck />
+                          </button>
+                          <div className="text" onClick={() => toggle(it.id)}>
+                            <div>{it.text}</div>
+                            {it.desc && <div className="desc">{it.desc}</div>}
+                            <div className="meta">
+                              {it.category && (
+                                <span className="mini-chip">{it.category}</span>
+                              )}
+                              {it.priority && (
+                                <span className="mini-chip">{it.priority}</span>
+                              )}
+                              {it.due && (
+                                <span className="mini-chip">
+                                  {new Date(it.due).toLocaleString()}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                          <button
+                            className={`icon-btn star ${
+                              it.important ? "active" : ""
+                            }`}
+                            onClick={() => toggleImportant(it.id)}
+                            aria-label="Toggle important"
+                          >
+                            {it.important ? <FaStar /> : <FiStar />}
+                          </button>
+                          <button
+                            className="danger"
+                            onClick={() => remove(it.id)}
+                            aria-label="Delete task"
+                          >
+                            <FiTrash2 />
+                          </button>
+                        </article>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </section>
+            ) : (
+              <section className="todo-list">
+                {shown.length === 0 && (
+                  <div className="empty">
+                    No tasks here. Add your first one!
+                  </div>
+                )}
+                {GROUPS.map((g) => (
+                  <div key={g} className="group-block">
+                    <h3 className="group-title">{g}</h3>
+                    {(byGroup[g] || []).map((it) => (
+                      <article
+                        key={it.id}
+                        className={`todo-item ${it.done ? "done" : ""}`}
+                      >
+                        <button
+                          className={`check ${it.done ? "checked" : ""}`}
+                          onClick={() => toggle(it.id)}
+                          aria-label={
+                            it.done ? "Mark as not done" : "Mark as done"
+                          }
+                        >
                           <FiCheck />
                         </button>
                         <div className="text" onClick={() => toggle(it.id)}>
                           <div>{it.text}</div>
                           {it.desc && <div className="desc">{it.desc}</div>}
                           <div className="meta">
-                            {it.category && <span className="mini-chip">{it.category}</span>}
-                            {it.priority && <span className="mini-chip">{it.priority}</span>}
-                            {it.due && <span className="mini-chip">{new Date(it.due).toLocaleString()}</span>}
+                            {it.category && (
+                              <span className="mini-chip">{it.category}</span>
+                            )}
+                            {it.priority && (
+                              <span className="mini-chip">{it.priority}</span>
+                            )}
+                            {it.due && (
+                              <span className="mini-chip">
+                                {new Date(it.due).toLocaleString()}
+                              </span>
+                            )}
                           </div>
                         </div>
-                        <button className={`icon-btn star ${it.important ? 'active' : ''}`} onClick={() => toggleImportant(it.id)} aria-label="Toggle important">
+                        <button
+                          className={`icon-btn star ${
+                            it.important ? "active" : ""
+                          }`}
+                          onClick={() => toggleImportant(it.id)}
+                          aria-label="Toggle important"
+                        >
                           {it.important ? <FaStar /> : <FiStar />}
                         </button>
-                        <button className="danger" onClick={() => remove(it.id)} aria-label="Delete task"><FiTrash2 /></button>
+                        <button
+                          className="danger"
+                          onClick={() => remove(it.id)}
+                          aria-label="Delete task"
+                        >
+                          <FiTrash2 />
+                        </button>
                       </article>
                     ))}
                   </div>
-                </div>
-              ))}
-            </section>
-          ) : (
-            <section className="todo-list">
-              {shown.length === 0 && (
-                <div className="empty">No tasks here. Add your first one!</div>
-              )}
-              {GROUPS.map((g)=> (
-                <div key={g} className="group-block">
-                  <h3 className="group-title">{g}</h3>
-                  {(byGroup[g]||[]).map((it) => (
-                    <article key={it.id} className={`todo-item ${it.done ? "done" : ""}`}>
-                      <button className={`check ${it.done ? 'checked' : ''}`} onClick={() => toggle(it.id)} aria-label={it.done ? "Mark as not done" : "Mark as done"}>
-                        <FiCheck />
-                      </button>
-                      <div className="text" onClick={() => toggle(it.id)}>
-                        <div>{it.text}</div>
-                        {it.desc && <div className="desc">{it.desc}</div>}
-                        <div className="meta">
-                          {it.category && <span className="mini-chip">{it.category}</span>}
-                          {it.priority && <span className="mini-chip">{it.priority}</span>}
-                          {it.due && <span className="mini-chip">{new Date(it.due).toLocaleString()}</span>}
-                        </div>
-                      </div>
-                      <button className={`icon-btn star ${it.important ? 'active' : ''}`} onClick={() => toggleImportant(it.id)} aria-label="Toggle important">
-                        {it.important ? <FaStar /> : <FiStar />}
-                      </button>
-                      <button className="danger" onClick={() => remove(it.id)} aria-label="Delete task"><FiTrash2 /></button>
-                    </article>
-                  ))}
-                </div>
-              ))}
-            </section>
-          )}
+                ))}
+              </section>
+            )}
           </div>
         </div>
         {isCreateOpen && (
-          <div className="todo-modal-overlay" onClick={()=>setCreateOpen(false)}>
-            <div className="todo-modal" onClick={(e)=>e.stopPropagation()}>
+          <div
+            className="todo-modal-overlay"
+            onClick={() => setCreateOpen(false)}
+          >
+            <div className="todo-modal" onClick={(e) => e.stopPropagation()}>
               <div className="modal-head">Create Task</div>
               <div className="modal-body">
-                <input className="full" placeholder="Task title" value={mText} onChange={(e)=>setMText(e.target.value)} />
-                <textarea className="full tall" placeholder="Task description (optional)" value={mDesc} onChange={(e)=>setMDesc(e.target.value)} />
+                <input
+                  className="full"
+                  placeholder="Task title"
+                  value={mText}
+                  onChange={(e) => setMText(e.target.value)}
+                />
+                <textarea
+                  className="full tall"
+                  placeholder="Task description (optional)"
+                  value={mDesc}
+                  onChange={(e) => setMDesc(e.target.value)}
+                />
                 <div>
-                  <label style={{fontWeight:600, color:'#333'}}>Category:</label>
-                  <div className="chips" style={{marginTop:8}}>
+                  <label style={{ fontWeight: 600, color: "#333" }}>
+                    Category:
+                  </label>
+                  <div className="chips" style={{ marginTop: 8 }}>
                     {CATEGORIES.map((c) => (
                       <button
                         key={c}
-                        className={`chip ${mCategory === c ? 'active' : ''}`}
+                        className={`chip ${mCategory === c ? "active" : ""}`}
                         onClick={() => setMCategory(c)}
-                      >{c}</button>
+                      >
+                        {c}
+                      </button>
                     ))}
                   </div>
                 </div>
                 <div className="grid2">
-                  <input type="date" value={mDate} onChange={(e)=>setMDate(e.target.value)} />
-                  <input type="time" value={mRemTime} onChange={(e)=>setMRemTime(e.target.value)} />
+                  <input
+                    type="date"
+                    value={mDate}
+                    onChange={(e) => setMDate(e.target.value)}
+                  />
+                  <input
+                    type="time"
+                    value={mRemTime}
+                    onChange={(e) => setMRemTime(e.target.value)}
+                  />
                 </div>
                 <div className="grid2">
-                  <select value={mGroup} onChange={(e)=>setMGroup(e.target.value)}>
-                    {GROUPS.map(g=> <option key={g}>{g}</option>)}
+                  <select
+                    value={mGroup}
+                    onChange={(e) => setMGroup(e.target.value)}
+                  >
+                    {GROUPS.map((g) => (
+                      <option key={g}>{g}</option>
+                    ))}
                   </select>
-                  <select value={mPriority} onChange={(e)=>setMPriority(e.target.value)}>
+                  <select
+                    value={mPriority}
+                    onChange={(e) => setMPriority(e.target.value)}
+                  >
                     <option>Easy</option>
                     <option>Medium</option>
                     <option>High</option>
@@ -288,8 +506,15 @@ export default function TodoPage() {
                 </div>
               </div>
               <div className="modal-actions">
-                <button className="outline" onClick={()=>setCreateOpen(false)}>Cancel</button>
-                <button className="btn-orange" onClick={createFromModal}><FiPlus /> Create</button>
+                <button
+                  className="outline"
+                  onClick={() => setCreateOpen(false)}
+                >
+                  Cancel
+                </button>
+                <button className="btn-orange" onClick={createFromModal}>
+                  <FiPlus /> Create
+                </button>
               </div>
             </div>
           </div>

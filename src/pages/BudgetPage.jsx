@@ -40,11 +40,46 @@ export default function BudgetPage() {
   const [startDate] = useState(new Date());
   const [endDate] = useState(new Date(Date.now() + 3 * 24 * 60 * 60 * 1000));
   const [expenses, setExpenses] = useState([
-    { id: 1, place: "Eiffel Tower Tickets", amount: 45, category: "activities", date: new Date("2026-01-05"), source: "manual" },
-    { id: 2, place: "Le Comptoir Dinner", amount: 85, category: "food", date: new Date("2026-01-05"), source: "manual" },
-    { id: 3, place: "Hotel Renaissance", amount: 180, category: "stay", date: new Date("2026-01-04"), source: "manual" },
-    { id: 4, place: "Metro Pass (Week)", amount: 22, category: "transport", date: new Date("2026-01-04"), source: "manual" },
-    { id: 5, place: "Souvenir Shop", amount: 35, category: "shopping", date: new Date("2026-01-03"), source: "manual" },
+    {
+      id: 1,
+      place: "Eiffel Tower Tickets",
+      amount: 45,
+      category: "activities",
+      date: new Date("2026-01-05"),
+      source: "manual",
+    },
+    {
+      id: 2,
+      place: "Le Comptoir Dinner",
+      amount: 85,
+      category: "food",
+      date: new Date("2026-01-05"),
+      source: "manual",
+    },
+    {
+      id: 3,
+      place: "Hotel Renaissance",
+      amount: 180,
+      category: "stay",
+      date: new Date("2026-01-04"),
+      source: "manual",
+    },
+    {
+      id: 4,
+      place: "Metro Pass (Week)",
+      amount: 22,
+      category: "transport",
+      date: new Date("2026-01-04"),
+      source: "manual",
+    },
+    {
+      id: 5,
+      place: "Souvenir Shop",
+      amount: 35,
+      category: "shopping",
+      date: new Date("2026-01-03"),
+      source: "manual",
+    },
   ]);
   const [scanDraft, setScanDraft] = useState(null);
   const [people, setPeople] = useState(["Priya", "Riya", "Arjun"]);
@@ -59,14 +94,15 @@ export default function BudgetPage() {
     [expenses]
   );
   const remaining = Math.max(0, tripBudget - totalSpent);
-  const budgetPct = Math.min(100, Math.round((totalSpent / Math.max(1, tripBudget)) * 100));
-  const ringColor = budgetPct < 60 ? "#22c55e" : budgetPct < 85 ? "#eab308" : "#ef4444";
+  const budgetPct = Math.min(
+    100,
+    Math.round((totalSpent / Math.max(1, tripBudget)) * 100)
+  );
+  const ringColor =
+    budgetPct < 60 ? "#22c55e" : budgetPct < 85 ? "#eab308" : "#ef4444";
 
   function addExpense(exp) {
-    setExpenses((prev) => [
-      { id: Date.now(), ...exp },
-      ...prev,
-    ]);
+    setExpenses((prev) => [{ id: Date.now(), ...exp }, ...prev]);
   }
 
   function deleteExpense(id) {
@@ -78,13 +114,21 @@ export default function BudgetPage() {
     if (!file) return;
     const guess = /\d{2,6}/.exec(file.name || "");
     const amount = guess ? Number(guess[0]) : 480;
-    setScanDraft({ place: "Scanned Shop", amount, category: "food", date: new Date(), source: "ocr" });
+    setScanDraft({
+      place: "Scanned Shop",
+      amount,
+      category: "food",
+      date: new Date(),
+      source: "ocr",
+    });
   }
 
   // Charts data
   const byCategory = useMemo(() => {
     const map = Object.fromEntries(categories.map((c) => [c.key, 0]));
-    expenses.forEach((e) => { map[e.category] = (map[e.category] || 0) + e.amount; });
+    expenses.forEach((e) => {
+      map[e.category] = (map[e.category] || 0) + e.amount;
+    });
     return map;
   }, [expenses]);
 
@@ -93,7 +137,13 @@ export default function BudgetPage() {
     datasets: [
       {
         data: [800, 450, 350, 200, 600],
-        backgroundColor: ["#3b82f6", "#10b981", "#8b5cf6", "#f59e0b", "#ef5da8"],
+        backgroundColor: [
+          "#3b82f6",
+          "#10b981",
+          "#8b5cf6",
+          "#f59e0b",
+          "#ef5da8",
+        ],
         borderWidth: 0,
       },
     ],
@@ -105,7 +155,9 @@ export default function BudgetPage() {
       const k = new Date(e.date).toDateString();
       map[k] = (map[k] || 0) + e.amount;
     });
-    const entries = Object.entries(map).sort((a, b) => new Date(a[0]) - new Date(b[0]));
+    const entries = Object.entries(map).sort(
+      (a, b) => new Date(a[0]) - new Date(b[0])
+    );
     return entries;
   }, [expenses]);
 
@@ -117,26 +169,49 @@ export default function BudgetPage() {
   const barData = {
     labels: ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"],
     datasets: [
-      { label: "Daily Spending", data: [130, 280, 330, 160, 400, 300, 240], backgroundColor: "#14b8a6" },
+      {
+        label: "Daily Spending",
+        data: [130, 280, 330, 160, 400, 300, 240],
+        backgroundColor: "#14b8a6",
+      },
     ],
   };
 
   const lineData = {
     labels: ["Week 1", "Week 2", "Week 3", "Week 4"],
     datasets: [
-      { label: "Budgeted", data: [800, 800, 800, 600], borderColor: "#3b82f6", backgroundColor: "#3b82f6", tension: 0.3 },
-      { label: "Actual", data: [650, 750, 900, 500], borderColor: "#10b981", backgroundColor: "#10b981", tension: 0.3 },
+      {
+        label: "Budgeted",
+        data: [800, 800, 800, 600],
+        borderColor: "#3b82f6",
+        backgroundColor: "#3b82f6",
+        tension: 0.3,
+      },
+      {
+        label: "Actual",
+        data: [650, 750, 900, 500],
+        borderColor: "#10b981",
+        backgroundColor: "#10b981",
+        tension: 0.3,
+      },
     ],
   };
 
   const insights = useMemo(() => {
     const tips = [];
-    const foodShare = totalSpent ? Math.round((byCategory.food / totalSpent) * 100) : 0;
-    if (foodShare > 35) tips.push(`You spent ${foodShare}% on food – try cheaper places nearby.`);
+    const foodShare = totalSpent
+      ? Math.round((byCategory.food / totalSpent) * 100)
+      : 0;
+    if (foodShare > 35)
+      tips.push(`You spent ${foodShare}% on food – try cheaper places nearby.`);
     const avgPerDay = byDay.length ? Math.round(totalSpent / byDay.length) : 0;
     const projected = avgPerDay * daysLeft;
-    if (projected > 0) tips.push(`You may spend approx ₹${projected} in the next ${daysLeft} days.`);
-    if (totalSpent <= tripBudget) tips.push("You are on track to finish within budget.");
+    if (projected > 0)
+      tips.push(
+        `You may spend approx ₹${projected} in the next ${daysLeft} days.`
+      );
+    if (totalSpent <= tripBudget)
+      tips.push("You are on track to finish within budget.");
     return tips;
   }, [byCategory, totalSpent, byDay, daysLeft, tripBudget]);
 
@@ -148,7 +223,13 @@ export default function BudgetPage() {
     doc.text("Expenses:", 20, 60);
     let y = 70;
     expenses.slice(0, 20).forEach((e) => {
-      doc.text(`${new Date(e.date).toLocaleDateString()} - ${e.place} - ₹${e.amount} - ${e.category}`, 20, y);
+      doc.text(
+        `${new Date(e.date).toLocaleDateString()} - ${e.place} - ₹${
+          e.amount
+        } - ${e.category}`,
+        20,
+        y
+      );
       y += 8;
     });
     doc.save("travista-budget.pdf");
@@ -171,7 +252,9 @@ export default function BudgetPage() {
   // Simple group split: everyone owes equal share
   const splitSummary = useMemo(() => {
     const total = totalSpent;
-    const perHead = people.length ? Math.round((total / people.length) * 100) / 100 : 0;
+    const perHead = people.length
+      ? Math.round((total / people.length) * 100) / 100
+      : 0;
     return people.map((p) => ({ name: p, owes: perHead }));
   }, [people, totalSpent]);
 
@@ -181,7 +264,9 @@ export default function BudgetPage() {
       <main className="smart-budget" aria-label="Smart Budget page">
         {/* Hero */}
         <section className="budget-hero">
-          <h1>Budget Tracker <span>💰</span></h1>
+          <h1>
+            Budget Tracker <span>💰</span>
+          </h1>
           <p>Smart expense management for your Paris trip</p>
         </section>
 
@@ -194,13 +279,19 @@ export default function BudgetPage() {
           </div>
           <div className="metric-card">
             <h4>Amount Spent</h4>
-            <div className="metric-amount red">${totalSpent.toLocaleString()}</div>
+            <div className="metric-amount red">
+              ${totalSpent.toLocaleString()}
+            </div>
             <div className="metric-sub">{budgetPct}% of budget</div>
           </div>
           <div className="metric-card">
             <h4>Remaining</h4>
-            <div className="metric-amount green">${remaining.toLocaleString()}</div>
-            <div className="metric-sub">{Math.max(0, 100 - budgetPct)}% left</div>
+            <div className="metric-amount green">
+              ${remaining.toLocaleString()}
+            </div>
+            <div className="metric-sub">
+              {Math.max(0, 100 - budgetPct)}% left
+            </div>
           </div>
           <div className="metric-card">
             <h4>Avg. Daily Spend</h4>
@@ -225,20 +316,47 @@ export default function BudgetPage() {
           <section className="scan-draft">
             <h3>Scanned Receipt</h3>
             <div className="draft-row">
-              <input value={scanDraft.place}
-                     onChange={(e) => setScanDraft({ ...scanDraft, place: e.target.value })} />
-              <input type="number" value={scanDraft.amount}
-                     onChange={(e) => setScanDraft({ ...scanDraft, amount: Number(e.target.value) })} />
-              <select value={scanDraft.category}
-                      onChange={(e) => setScanDraft({ ...scanDraft, category: e.target.value })}>
+              <input
+                value={scanDraft.place}
+                onChange={(e) =>
+                  setScanDraft({ ...scanDraft, place: e.target.value })
+                }
+              />
+              <input
+                type="number"
+                value={scanDraft.amount}
+                onChange={(e) =>
+                  setScanDraft({ ...scanDraft, amount: Number(e.target.value) })
+                }
+              />
+              <select
+                value={scanDraft.category}
+                onChange={(e) =>
+                  setScanDraft({ ...scanDraft, category: e.target.value })
+                }
+              >
                 {categories.map((c) => (
-                  <option key={c.key} value={c.key}>{c.label}</option>
+                  <option key={c.key} value={c.key}>
+                    {c.label}
+                  </option>
                 ))}
               </select>
-              <button onClick={() => { addExpense(scanDraft); setScanDraft(null); }}>Confirm</button>
-              <button className="outline" onClick={() => setScanDraft(null)}>Cancel</button>
+              <button
+                onClick={() => {
+                  addExpense(scanDraft);
+                  setScanDraft(null);
+                }}
+              >
+                Confirm
+              </button>
+              <button className="outline" onClick={() => setScanDraft(null)}>
+                Cancel
+              </button>
             </div>
-            <p>₹{scanDraft.amount} added to {categories.find(c=>c.key===scanDraft.category)?.label}</p>
+            <p>
+              ₹{scanDraft.amount} added to{" "}
+              {categories.find((c) => c.key === scanDraft.category)?.label}
+            </p>
           </section>
         )}
 
@@ -248,24 +366,46 @@ export default function BudgetPage() {
             <div className="chart-card">
               <h3>Spending by Category</h3>
               <div className="chart-grid">
-                <div className="chart-main"><Doughnut data={donutData} /></div>
+                <div className="chart-main">
+                  <Doughnut data={donutData} />
+                </div>
                 <ul className="chart-legend">
-                  <li><span className="dot blue" /> Accommodation <strong>$800</strong></li>
-                  <li><span className="dot teal" /> Food <strong>$450</strong></li>
-                  <li><span className="dot purple" /> Transport <strong>$350</strong></li>
-                  <li><span className="dot amber" /> Shopping <strong>$200</strong></li>
-                  <li><span className="dot pink" /> Activities <strong>$600</strong></li>
+                  <li>
+                    <span className="dot blue" /> Accommodation{" "}
+                    <strong>$800</strong>
+                  </li>
+                  <li>
+                    <span className="dot teal" /> Food <strong>$450</strong>
+                  </li>
+                  <li>
+                    <span className="dot purple" /> Transport{" "}
+                    <strong>$350</strong>
+                  </li>
+                  <li>
+                    <span className="dot amber" /> Shopping{" "}
+                    <strong>$200</strong>
+                  </li>
+                  <li>
+                    <span className="dot pink" /> Activities{" "}
+                    <strong>$600</strong>
+                  </li>
                 </ul>
               </div>
             </div>
             <div className="chart-card">
               <h3>Daily Spending</h3>
-              <Bar data={barData} options={{ plugins: { legend: { display: false } } }} />
+              <Bar
+                data={barData}
+                options={{ plugins: { legend: { display: false } } }}
+              />
             </div>
           </div>
           <aside className="right">
             <div className="recent">
-              <div className="recent-header"><h3>Recent Expenses</h3><a>View All</a></div>
+              <div className="recent-header">
+                <h3>Recent Expenses</h3>
+                <a>View All</a>
+              </div>
               <div className="cards-list">
                 {expenses.map((e) => (
                   <div key={e.id} className="expense-card">
@@ -275,7 +415,12 @@ export default function BudgetPage() {
                     </div>
                     <div className="expense-meta">
                       <span>{categoryLabel(e.category)}</span>
-                      <span>{new Date(e.date).toLocaleDateString(undefined, { month: "short", day: "numeric" })}</span>
+                      <span>
+                        {new Date(e.date).toLocaleDateString(undefined, {
+                          month: "short",
+                          day: "numeric",
+                        })}
+                      </span>
                     </div>
                   </div>
                 ))}
@@ -283,13 +428,28 @@ export default function BudgetPage() {
             </div>
             <div className="actions">
               <label className="cta gradient">
-                <input type="file" accept="image/*" onChange={(e) => handleScanFile(e.target.files?.[0])} />
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => handleScanFile(e.target.files?.[0])}
+                />
                 <span>Upload Receipt (OCR)</span>
               </label>
-              <button className="cta" onClick={() => { downloadPDF(); exportExcel(); }}>Export Report</button>
+              <button
+                className="cta"
+                onClick={() => {
+                  downloadPDF();
+                  exportExcel();
+                }}
+              >
+                Export Report
+              </button>
               <div className="tip-box">
                 <h4>Budget Tip</h4>
-                <p>You’re spending more on food than average travelers to Paris. Consider local markets for affordable meals!</p>
+                <p>
+                  You’re spending more on food than average travelers to Paris.
+                  Consider local markets for affordable meals!
+                </p>
               </div>
             </div>
           </aside>
@@ -309,11 +469,17 @@ export default function BudgetPage() {
 
 function categoryLabel(key) {
   switch (key) {
-    case "stay": return "Accommodation";
-    case "food": return "Food";
-    case "transport": return "Transport";
-    case "shopping": return "Shopping";
-    case "activities": return "Activities";
-    default: return key;
+    case "stay":
+      return "Accommodation";
+    case "food":
+      return "Food";
+    case "transport":
+      return "Transport";
+    case "shopping":
+      return "Shopping";
+    case "activities":
+      return "Activities";
+    default:
+      return key;
   }
 }

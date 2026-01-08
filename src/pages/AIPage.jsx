@@ -1,6 +1,13 @@
 import { useEffect, useState } from "react";
 import NewNavbar from "../components/NewNavbar";
-import { FiMic, FiSend, FiMapPin, FiDollarSign, FiCoffee, FiCalendar } from "react-icons/fi";
+import {
+  FiMic,
+  FiSend,
+  FiMapPin,
+  FiDollarSign,
+  FiCoffee,
+  FiCalendar,
+} from "react-icons/fi";
 import { useLocation } from "react-router-dom";
 import { FaRegStar } from "react-icons/fa";
 
@@ -10,9 +17,11 @@ export default function AIPage() {
       id: 1,
       role: "ai",
       author: "Tavi AI",
-      text:
-        "Hi! I'm Tavi, your AI travel assistant! 🌍 How can I help you plan your perfect trip today?",
-      time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+      text: "Hi! I'm Tavi, your AI travel assistant! 🌍 How can I help you plan your perfect trip today?",
+      time: new Date().toLocaleTimeString([], {
+        hour: "2-digit",
+        minute: "2-digit",
+      }),
     },
   ]);
   const [input, setInput] = useState("");
@@ -29,7 +38,16 @@ export default function AIPage() {
     if (!trimmed) return;
     setMessages((prev) => [
       ...prev,
-      { id: Date.now(), role: "user", author: "You", text: trimmed, time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) },
+      {
+        id: Date.now(),
+        role: "user",
+        author: "You",
+        text: trimmed,
+        time: new Date().toLocaleTimeString([], {
+          hour: "2-digit",
+          minute: "2-digit",
+        }),
+      },
     ]);
     setInput("");
   };
@@ -60,10 +78,15 @@ export default function AIPage() {
           <section className="ai-chat">
             <div className="ai-thread">
               {messages.map((m) => (
-                <article key={m.id} className={`msg ${m.role === "ai" ? "msg-ai" : "msg-user"}`}>
+                <article
+                  key={m.id}
+                  className={`msg ${m.role === "ai" ? "msg-ai" : "msg-user"}`}
+                >
                   {m.role === "ai" && (
                     <header className="msg-head">
-                      <span className="dot"><FaRegStar /></span>
+                      <span className="dot">
+                        <FaRegStar />
+                      </span>
                       <strong>Tavi AI</strong>
                     </header>
                   )}
@@ -76,14 +99,18 @@ export default function AIPage() {
             </div>
 
             <div className="ai-input">
-              <button className="icon left" aria-label="Voice"><FiMic /></button>
+              <button className="icon left" aria-label="Voice">
+                <FiMic />
+              </button>
               <input
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && sendMessage()}
                 placeholder="Vegan restaurants nearby"
               />
-              <button className="send" onClick={sendMessage} aria-label="Send"><FiSend /></button>
+              <button className="send" onClick={sendMessage} aria-label="Send">
+                <FiSend />
+              </button>
             </div>
           </section>
 
@@ -92,7 +119,11 @@ export default function AIPage() {
               <h3>Popular Topics</h3>
               <div className="topic-list">
                 {popularTopics.map((t) => (
-                  <button key={t.title} className="topic-card" onClick={() => quickAsk(t.title)}>
+                  <button
+                    key={t.title}
+                    className="topic-card"
+                    onClick={() => quickAsk(t.title)}
+                  >
                     <div className="topic-icon">{t.icon}</div>
                     <div className="topic-copy">
                       <strong>{t.title}</strong>
@@ -107,7 +138,11 @@ export default function AIPage() {
               <h3>Quick Questions</h3>
               <div className="quick-list">
                 {quickQuestions.map((q) => (
-                  <button key={q} className="quick-item" onClick={() => quickAsk(q)}>
+                  <button
+                    key={q}
+                    className="quick-item"
+                    onClick={() => quickAsk(q)}
+                  >
                     {q}
                   </button>
                 ))}

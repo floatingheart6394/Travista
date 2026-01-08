@@ -16,7 +16,14 @@ import {
   FiHome,
   FiPlusCircle,
 } from "react-icons/fi";
-import { FaAmbulance, FaFireExtinguisher, FaHospitalAlt, FaClinicMedical, FaCapsules, FaLandmark } from "react-icons/fa";
+import {
+  FaAmbulance,
+  FaFireExtinguisher,
+  FaHospitalAlt,
+  FaClinicMedical,
+  FaCapsules,
+  FaLandmark,
+} from "react-icons/fa";
 import { useNavigate } from "react-router-dom";
 
 export default function EmergencyPage() {
@@ -67,9 +74,13 @@ export default function EmergencyPage() {
           {/* Location banner */}
           <section className="emer-location">
             <div className="left">
-              <span className="loc-icon"><FiMapPin /></span>
+              <span className="loc-icon">
+                <FiMapPin />
+              </span>
               <div>
-                <div className="loc-title">Current Location <span className="chip active">Active</span></div>
+                <div className="loc-title">
+                  Current Location <span className="chip active">Active</span>
+                </div>
                 <div className="loc-sub">Paris, Île-de-France, France</div>
               </div>
             </div>
@@ -81,25 +92,53 @@ export default function EmergencyPage() {
             <h2>Emergency Hotlines</h2>
             <div className="hotline-grid">
               <div className="hot-card">
-                <div className="hot-head"><span className="hot-icon"><FiPhoneCall /></span><span className="hot-call"><FiPhoneCall /></span></div>
+                <div className="hot-head">
+                  <span className="hot-icon">
+                    <FiPhoneCall />
+                  </span>
+                  <span className="hot-call">
+                    <FiPhoneCall />
+                  </span>
+                </div>
                 <div className="hot-number">112</div>
                 <div className="hot-title">General Emergency</div>
                 <div className="hot-sub">All emergencies</div>
               </div>
               <div className="hot-card">
-                <div className="hot-head"><span className="hot-icon"><FiShield /></span><span className="hot-call"><FiPhoneCall /></span></div>
+                <div className="hot-head">
+                  <span className="hot-icon">
+                    <FiShield />
+                  </span>
+                  <span className="hot-call">
+                    <FiPhoneCall />
+                  </span>
+                </div>
                 <div className="hot-number">17</div>
                 <div className="hot-title">Police</div>
                 <div className="hot-sub">Law enforcement</div>
               </div>
               <div className="hot-card">
-                <div className="hot-head"><span className="hot-icon"><FaAmbulance /></span><span className="hot-call"><FiPhoneCall /></span></div>
+                <div className="hot-head">
+                  <span className="hot-icon">
+                    <FaAmbulance />
+                  </span>
+                  <span className="hot-call">
+                    <FiPhoneCall />
+                  </span>
+                </div>
                 <div className="hot-number">15</div>
                 <div className="hot-title">Medical Emergency</div>
                 <div className="hot-sub">SAMU ambulance</div>
               </div>
               <div className="hot-card">
-                <div className="hot-head"><span className="hot-icon"><FaFireExtinguisher /></span><span className="hot-call"><FiPhoneCall /></span></div>
+                <div className="hot-head">
+                  <span className="hot-icon">
+                    <FaFireExtinguisher />
+                  </span>
+                  <span className="hot-call">
+                    <FiPhoneCall />
+                  </span>
+                </div>
                 <div className="hot-number">18</div>
                 <div className="hot-title">Fire Department</div>
                 <div className="hot-sub">Fire & rescue</div>
@@ -114,10 +153,22 @@ export default function EmergencyPage() {
               <input placeholder="Search for services, facilities, or addresses..." />
             </div>
             <div className="actions">
-              <button className="outline"><FiFilter /> Filters</button>
+              <button className="outline">
+                <FiFilter /> Filters
+              </button>
               <div className="toggle">
-                <button className={`tbtn ${view==='list' ? 'active' : ''}`} onClick={() => setView('list')}><FiList /> List</button>
-                <button className={`tbtn ${view==='map' ? 'active' : ''}`} onClick={() => setView('map')}><FiMap /> Map</button>
+                <button
+                  className={`tbtn ${view === "list" ? "active" : ""}`}
+                  onClick={() => setView("list")}
+                >
+                  <FiList /> List
+                </button>
+                <button
+                  className={`tbtn ${view === "map" ? "active" : ""}`}
+                  onClick={() => setView("map")}
+                >
+                  <FiMap /> Map
+                </button>
               </div>
             </div>
           </div>
@@ -131,7 +182,7 @@ export default function EmergencyPage() {
                 <ul className="cat-list">
                   <li className="cat-all">All Services</li>
                   {categories.map((c) => (
-                    <li key={c.label} className={c.active ? 'active' : ''}>
+                    <li key={c.label} className={c.active ? "active" : ""}>
                       <span className="cat-ico">{c.icon}</span>
                       <span className="cat-name">{c.label}</span>
                       <span className="cat-count">{c.count}</span>
@@ -143,33 +194,55 @@ export default function EmergencyPage() {
               <div className="card contacts">
                 <div className="card-head">
                   <h3>Emergency Contacts</h3>
-                  <button className="icon-sm" aria-label="Add contact"><FiPlus /></button>
+                  <button className="icon-sm" aria-label="Add contact">
+                    <FiPlus />
+                  </button>
                 </div>
 
                 <div className="contact-card">
                   <div className="contact-head">
-                    <div className="qicon"><FiUser /></div>
+                    <div className="qicon">
+                      <FiUser />
+                    </div>
                     <div className="qmain">
                       <div className="qtitle">Mom</div>
                       <div className="qsub">Family</div>
                     </div>
                   </div>
-                  <a className="phone-chip" href={`tel:${toTel('+1 555 123 4567')}`}>+1 555 123 4567</a>
-                  <a className="cta-call" href={`tel:${toTel('+1 555 123 4567')}`}>
+                  <a
+                    className="phone-chip"
+                    href={`tel:${toTel("+1 555 123 4567")}`}
+                  >
+                    +1 555 123 4567
+                  </a>
+                  <a
+                    className="cta-call"
+                    href={`tel:${toTel("+1 555 123 4567")}`}
+                  >
                     <FiPhoneCall /> <span>Call Now</span>
                   </a>
                 </div>
 
                 <div className="contact-card">
                   <div className="contact-head">
-                    <div className="qicon"><FiUser /></div>
+                    <div className="qicon">
+                      <FiUser />
+                    </div>
                     <div className="qmain">
                       <div className="qtitle">Hotel Concierge</div>
                       <div className="qsub">Hotel</div>
                     </div>
                   </div>
-                  <a className="phone-chip" href={`tel:${toTel('+33 1 42 60 30 30')}`}>+33 1 42 60 30 30</a>
-                  <a className="cta-call" href={`tel:${toTel('+33 1 42 60 30 30')}`}>
+                  <a
+                    className="phone-chip"
+                    href={`tel:${toTel("+33 1 42 60 30 30")}`}
+                  >
+                    +33 1 42 60 30 30
+                  </a>
+                  <a
+                    className="cta-call"
+                    href={`tel:${toTel("+33 1 42 60 30 30")}`}
+                  >
                     <FiPhoneCall /> <span>Call Now</span>
                   </a>
                 </div>
@@ -184,20 +257,34 @@ export default function EmergencyPage() {
 
               <div className="card">
                 <div className="list-head">
-                  <h3>Nearby Locations <span className="muted">(4 results)</span></h3>
-                  <div className="sortby">Sort by <strong>Distance</strong> ▾</div>
+                  <h3>
+                    Nearby Locations <span className="muted">(4 results)</span>
+                  </h3>
+                  <div className="sortby">
+                    Sort by <strong>Distance</strong> ▾
+                  </div>
                 </div>
                 <div className="listings">
                   {listings.map((it) => (
                     <article key={it.name} className="place">
-                      <div className="pl-ico"><FaHospitalAlt /></div>
+                      <div className="pl-ico">
+                        <FaHospitalAlt />
+                      </div>
                       <div className="pl-main">
                         <h4>{it.name}</h4>
                         <div className="pl-type">{it.type}</div>
                         <div className="pl-meta">📍 {it.address}</div>
-                        <div className="pl-rate">⭐ {it.rating} <span className="muted">({it.reviews} reviews)</span>  ☎ {it.phone}</div>
+                        <div className="pl-rate">
+                          ⭐ {it.rating}{" "}
+                          <span className="muted">({it.reviews} reviews)</span>{" "}
+                          ☎ {it.phone}
+                        </div>
                         <div className="pl-tags">
-                          {it.tags.map(t => (<span key={t} className="tag">{t}</span>))}
+                          {it.tags.map((t) => (
+                            <span key={t} className="tag">
+                              {t}
+                            </span>
+                          ))}
                         </div>
                       </div>
                       <div className="pl-actions">
@@ -207,7 +294,12 @@ export default function EmergencyPage() {
                         </div>
                         <div className="buttons">
                           <button className="primary">Get Directions</button>
-                          <a className="outline" href={`tel:${toTel(it.phone)}`}><FiPhoneCall /> Call Now</a>
+                          <a
+                            className="outline"
+                            href={`tel:${toTel(it.phone)}`}
+                          >
+                            <FiPhoneCall /> Call Now
+                          </a>
                           <button className="link">Details</button>
                         </div>
                       </div>
@@ -218,7 +310,9 @@ export default function EmergencyPage() {
 
               {/* Embassy card */}
               <div className="embassy">
-                <div className="emb-ico"><FaLandmark /></div>
+                <div className="emb-ico">
+                  <FaLandmark />
+                </div>
                 <div className="emb-body">
                   <h3>U.S. Embassy Paris</h3>
                   <div>2 Avenue Gabriel, 75008 Paris</div>

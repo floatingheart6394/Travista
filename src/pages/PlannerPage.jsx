@@ -1,5 +1,11 @@
 import { useState } from "react";
-import { FiMapPin, FiCalendar, FiDollarSign, FiUsers, FiZap } from "react-icons/fi";
+import {
+  FiMapPin,
+  FiCalendar,
+  FiDollarSign,
+  FiUsers,
+  FiZap,
+} from "react-icons/fi";
 import NewNavbar from "../components/NewNavbar";
 
 const STYLES = [
@@ -53,7 +59,9 @@ export default function PlannerPage() {
           <section className="planner-card">
             <h2>Where do you want to go?</h2>
             <div className="planner-input full with-icon">
-              <span className="ico"><FiMapPin /></span>
+              <span className="ico">
+                <FiMapPin />
+              </span>
               <input
                 type="text"
                 placeholder="Enter destination (e.g., Tokyo, Paris, New York)"
@@ -65,7 +73,9 @@ export default function PlannerPage() {
             <div className="planner-grid2">
               <label className="planner-field">
                 <div className="field-head">
-                  <span className="ico"><FiCalendar /></span>
+                  <span className="ico">
+                    <FiCalendar />
+                  </span>
                   <span className="label">Trip Duration</span>
                 </div>
                 <input
@@ -77,7 +87,9 @@ export default function PlannerPage() {
               </label>
               <label className="planner-field">
                 <div className="field-head">
-                  <span className="ico"><FiDollarSign /></span>
+                  <span className="ico">
+                    <FiDollarSign />
+                  </span>
                   <span className="label">Budget (USD)</span>
                 </div>
                 <input
@@ -91,7 +103,9 @@ export default function PlannerPage() {
 
             <label className="planner-field">
               <div className="field-head">
-                <span className="ico"><FiUsers /></span>
+                <span className="ico">
+                  <FiUsers />
+                </span>
                 <span className="label">Number of Travelers</span>
               </div>
               <input
@@ -120,7 +134,9 @@ export default function PlannerPage() {
 
             <div className="planner-actions">
               <button className="planner-generate" onClick={handleGenerate}>
-                <span className="bolt"><FiZap /></span>
+                <span className="bolt">
+                  <FiZap />
+                </span>
                 Generate AI Itinerary
               </button>
             </div>
@@ -130,9 +146,9 @@ export default function PlannerPage() {
             <div className="panel gradient">
               <h3>AI-Powered Planning</h3>
               <p>
-                Our advanced AI analyzes thousands of travel data points, reviews, and
-                real-time information to create the perfect itinerary tailored to your
-                preferences and budget.
+                Our advanced AI analyzes thousands of travel data points,
+                reviews, and real-time information to create the perfect
+                itinerary tailored to your preferences and budget.
               </p>
             </div>
             <div className="panel">
