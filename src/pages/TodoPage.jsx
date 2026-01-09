@@ -197,14 +197,6 @@ export default function TodoPage() {
             </button>
             <nav className="snav">
               <button
-                className={`sitem ${side === "All tasks" ? "active" : ""}`}
-                onClick={() => setSide("All tasks")}
-              >
-                <FiHome />
-                <span>Tasks</span>
-                <span className="count">{items.length}</span>
-              </button>
-              <button
                 className={`sitem ${side === "Important" ? "active" : ""}`}
                 onClick={() => setSide("Important")}
               >
@@ -236,15 +228,6 @@ export default function TodoPage() {
                   </span>
                 </button>
               ))}
-              <button
-                className={`sitem ${side === "Completed" ? "active" : ""}`}
-                onClick={() => setSide("Completed")}
-              >
-                <span>Completed</span>
-                <span className="count">
-                  {items.filter((i) => i.done).length}
-                </span>
-              </button>
             </div>
           </aside>
           <div className="todo-wrap">
