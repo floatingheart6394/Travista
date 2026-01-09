@@ -33,13 +33,12 @@ export default function LoginPage() {
     localStorage.setItem("access_token", data.access_token);
 
     // ✅ Redirect to home (or dashboard later)
-    navigate("/");
+    navigate("/dashboard");
   } catch (err) {
     console.error(err);
     setError("Server error. Please try again.");
   }
 };
-
 
   return (
     <div className="login-page">
