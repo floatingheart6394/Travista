@@ -1,17 +1,8 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import NewNavbar from "../components/NewNavbar";
-import {
-  FiPlus,
-  FiTrash2,
-  FiCheck,
-  FiFilter,
-  FiClipboard,
-  FiStar,
-  FiHome,
-} from "react-icons/fi";
+import {FiPlus, FiTrash2, FiCheck, FiFilter, FiClipboard, FiStar,} from "react-icons/fi";
 import { FaStar } from "react-icons/fa";
-
-const LS_KEY = "travista_todos";
+import {fetchTodos,createTodo, updateTodo, deleteTodo,} from "../services/todoService";
 
 export default function TodoPage() {
   const [items, setItems] = useState([]);
@@ -27,89 +18,38 @@ export default function TodoPage() {
   const [mCategory, setMCategory] = useState("Other");
   const [side, setSide] = useState("All tasks");
 
-  // AI suggestion inputs removed
+  const loadTodos = async () => {
+    const data = await fetchTodos();
+
+    const mapped = data.map((t) => ({
+      id: t.id,
+      text: t.title,
+      desc: t.description,
+      category: t.category,
+      group: t.group,
+      priority: t.priority,
+      due: t.due_at,
+      remindAt: t.remind_at,
+      done: t.is_done,
+      important: t.is_important,
+    }));
+
+    setItems(mapped);
+  };
+
 
   const CATEGORIES = ["Packing", "Booking", "Documents", "Activities", "Other"];
   const GROUPS = ["Before Trip", "During Trip", "After Trip"];
 
   useEffect(() => {
-    try {
-      const raw = localStorage.getItem(LS_KEY);
-      if (raw) setItems(JSON.parse(raw));
-      else
-        setItems([
-          {
-            id: 1,
-            text: "Book flights to Rome",
-            category: "Booking",
-            group: "Before Trip",
-            done: false,
-            priority: "High",
-          },
-          {
-            id: 2,
-            text: "Renew passport",
-            category: "Documents",
-            group: "Before Trip",
-            done: true,
-            priority: "Medium",
-          },
-          {
-            id: 3,
-            text: "Add emergency contacts",
-            category: "Other",
-            group: "Before Trip",
-            done: false,
-            priority: "Low",
-          },
-        ]);
-    } catch {}
+    loadTodos();
   }, []);
 
-  useEffect(() => {
-    localStorage.setItem(LS_KEY, JSON.stringify(items));
-  }, [items]);
-
-  // simple reminder checker every 60s
-  useEffect(() => {
-    const id = setInterval(() => {
-      const now = Date.now();
-      const updated = [];
-      let changed = false;
-      for (const it of items) {
-        const remindTarget = it.remindAt || it.due;
-        if (remindTarget && !it.done && !it.reminded) {
-          const t = new Date(remindTarget).getTime();
-          if (!isNaN(t) && t <= now) {
-            changed = true;
-            updated.push({ ...it, reminded: true });
-            // Try notification, else alert
-            if ("Notification" in window) {
-              if (Notification.permission === "granted") {
-                new Notification("Task due", { body: it.text });
-              } else if (Notification.permission !== "denied") {
-                Notification.requestPermission();
-              }
-            }
-            alert(`Reminder: ${it.text}`);
-          } else {
-            updated.push(it);
-          }
-        } else updated.push(it);
-      }
-      if (changed) setItems(updated);
-    }, 60000);
-    return () => clearInterval(id);
-  }, [items]);
-
-  // inline add removed (use Create modal)
-
-  const createFromModal = () => {
+  const createFromModal = async () => {
     const t = mText.trim();
     if (!t) return;
     let dueISO;
     if (mDate) {
-      // just date used to represent due day (no specific time)
       dueISO = new Date(mDate + "T00:00").toISOString();
     }
     let remindAt;
@@ -117,18 +57,20 @@ export default function TodoPage() {
       remindAt = new Date(`${mDate}T${mRemTime}`).toISOString();
     }
     const payload = {
-      id: Date.now(),
-      text: t,
-      desc: mDesc || undefined,
+      title: t,
+      description: mDesc || null,
       category: mCategory,
       group: mGroup,
       priority: mPriority,
-      due: dueISO,
-      remindAt,
-      done: false,
-      important: false,
+      due_at: dueISO || null,
+      remind_at: remindAt || null,
+      is_done: false,
+      is_important: false,
     };
-    setItems((prev) => [payload, ...prev]);
+    
+    await createTodo(payload);
+    loadTodos();
+
     setCreateOpen(false);
     setMText("");
     setMDesc("");
@@ -139,19 +81,32 @@ export default function TodoPage() {
     setMCategory("Other");
   };
 
-  const toggle = (id) =>
-    setItems((prev) =>
-      prev.map((it) => (it.id === id ? { ...it, done: !it.done } : it))
-    );
-  const toggleImportant = (id) =>
-    setItems((prev) =>
-      prev.map((it) =>
-        it.id === id ? { ...it, important: !it.important } : it
-      )
-    );
-  const remove = (id) => setItems((prev) => prev.filter((it) => it.id !== id));
-  const clearCompleted = () =>
-    setItems((prev) => prev.filter((it) => !it.done));
+  const toggle = async (id) => {
+    const todo = items.find((i) => i.id === id);
+    await updateTodo(id, { is_done: !todo.done });
+    loadTodos();
+  };
+
+  const toggleImportant = async (id) => {
+    const todo = items.find((i) => i.id === id);
+    await updateTodo(id, { is_important: !todo.important });
+    loadTodos();
+  };
+
+  const remove = async (id) => {
+    await deleteTodo(id);
+    loadTodos();
+  };
+
+  const clearCompleted = async () => {
+    const completedTodos = items.filter((it) => it.done);
+
+    for (const todo of completedTodos) {
+      await deleteTodo(todo.id);
+    }
+
+    loadTodos();
+  };
 
   const shown = useMemo(() => {
     let arr = items;
@@ -170,7 +125,6 @@ export default function TodoPage() {
     ? Math.round((completed / items.length) * 100)
     : 0;
 
-  // Grouped views
   const byGroup = useMemo(() => {
     const base = { "Before Trip": [], "During Trip": [], "After Trip": [] };
     for (const it of shown) {
@@ -183,8 +137,6 @@ export default function TodoPage() {
       ? [side]
       : GROUPS;
   }, [side]);
-
-  // AI suggestions removed
 
   return (
     <div className="dashboard-page">
@@ -232,7 +184,6 @@ export default function TodoPage() {
           </aside>
           <div className="todo-wrap">
             <div className="todo-top">
-              {/* Progress card */}
               <div className="todo-progress card-lite">
                 <div className="tp-head">
                   <FiClipboard />
@@ -246,7 +197,6 @@ export default function TodoPage() {
                 </div>
               </div>
 
-              {/* Filters / tools */}
               <section className="todo-toolbar card-lite">
                 <div className="filters">
                   <button

@@ -29,10 +29,8 @@ export default function LoginPage() {
       return;
     }
 
-    // ✅ STORE JWT TOKEN
     localStorage.setItem("access_token", data.access_token);
 
-    // ✅ Redirect to home (or dashboard later)
     navigate("/dashboard");
   } catch (err) {
     console.error(err);
