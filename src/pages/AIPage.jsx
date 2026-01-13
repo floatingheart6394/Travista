@@ -33,24 +33,68 @@ export default function AIPage() {
     if (q) setInput(q);
   }, [location.search]);
 
-  const sendMessage = () => {
-    const trimmed = input.trim();
-    if (!trimmed) return;
+  const sendMessage = async () => {
+  const trimmed = input.trim();
+  if (!trimmed) return;
+
+  const userMsg = {
+    id: Date.now(),
+    role: "user",
+    author: "You",
+    text: trimmed,
+    time: new Date().toLocaleTimeString([], {
+      hour: "2-digit",
+      minute: "2-digit",
+    }),
+  };
+
+  // 1️⃣ Add user message immediately
+  setMessages((prev) => [...prev, userMsg]);
+  setInput("");
+
+  try {
+    // 2️⃣ Call backend
+    const res = await fetch("http://127.0.0.1:8000/ai/chat", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ message: trimmed }),
+    });
+
+    const data = await res.json();
+
+    // 3️⃣ Add AI reply
+    const aiMsg = {
+      id: Date.now() + 1,
+      role: "ai",
+      author: "Tavi AI",
+      text: data.reply,
+      time: new Date().toLocaleTimeString([], {
+        hour: "2-digit",
+        minute: "2-digit",
+      }),
+    };
+
+    setMessages((prev) => [...prev, aiMsg]);
+  } catch (error) {
+    // 4️⃣ Error handling
     setMessages((prev) => [
       ...prev,
       {
-        id: Date.now(),
-        role: "user",
-        author: "You",
-        text: trimmed,
+        id: Date.now() + 2,
+        role: "ai",
+        author: "Tavi AI",
+        text: "⚠️ Sorry, I couldn’t connect to the server.",
         time: new Date().toLocaleTimeString([], {
           hour: "2-digit",
           minute: "2-digit",
         }),
       },
     ]);
-    setInput("");
-  };
+  }
+};
+
 
   const quickAsk = (q) => {
     setInput(q);
