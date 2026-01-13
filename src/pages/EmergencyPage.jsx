@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import NewNavbar from "../components/NewNavbar";
 import {
   FiMapPin,
@@ -10,11 +10,9 @@ import {
   FiList,
   FiPlus,
   FiUser,
-  FiMessageCircle,
   FiDollarSign,
   FiFlag,
   FiHome,
-  FiPlusCircle,
 } from "react-icons/fi";
 import {
   FaAmbulance,
@@ -25,9 +23,31 @@ import {
   FaLandmark,
 } from "react-icons/fa";
 import { useNavigate } from "react-router-dom";
+import {
+  fetchEmergencyContacts,
+  addEmergencyContact,
+  deleteEmergencyContact,
+} from "../services/emergencyContact";
 
 export default function EmergencyPage() {
   const [view, setView] = useState("list");
+  const [contacts, setContacts] = useState([]);
+  const [loadingContacts, setLoadingContacts] = useState(true);
+  const [error, setError] = useState(null);
+  useEffect(() => {
+    async function loadContacts() {
+      try {
+        const data = await fetchEmergencyContacts();
+        setContacts(data);
+      } catch (err) {
+        setError(err.message);
+      } finally {
+        setLoadingContacts(false);
+      }
+    }
+
+    loadContacts();
+  }, []);
   const toTel = (p) => (p || "").replace(/[^+\d]/g, "");
   const navigate = useNavigate();
   const startWith = (q) => navigate(`/ai?q=${encodeURIComponent(q)}`);
@@ -194,66 +214,58 @@ export default function EmergencyPage() {
               <div className="card contacts">
                 <div className="card-head">
                   <h3>Emergency Contacts</h3>
-                  <button className="icon-sm" aria-label="Add contact">
+                  <button className="icon-sm"
+                    aria-label="Add contact"
+                    disabled={contacts.length >= 3}
+                    title={contacts.length >= 3 ? "Max 3 contacts allowed" : "Add contact"}>
                     <FiPlus />
                   </button>
                 </div>
 
-                <div className="contact-card">
-                  <div className="contact-head">
-                    <div className="qicon">
-                      <FiUser />
-                    </div>
-                    <div className="qmain">
-                      <div className="qtitle">Mom</div>
-                      <div className="qsub">Family</div>
-                    </div>
-                  </div>
-                  <a
-                    className="phone-chip"
-                    href={`tel:${toTel("+1 555 123 4567")}`}
-                  >
-                    +1 555 123 4567
-                  </a>
-                  <a
-                    className="cta-call"
-                    href={`tel:${toTel("+1 555 123 4567")}`}
-                  >
-                    <FiPhoneCall /> <span>Call Now</span>
-                  </a>
-                </div>
+                {loadingContacts && <p>Loading contacts...</p>}
+{error && <p className="error">{error}</p>}
 
-                <div className="contact-card">
-                  <div className="contact-head">
-                    <div className="qicon">
-                      <FiUser />
-                    </div>
-                    <div className="qmain">
-                      <div className="qtitle">Hotel Concierge</div>
-                      <div className="qsub">Hotel</div>
-                    </div>
-                  </div>
-                  <a
-                    className="phone-chip"
-                    href={`tel:${toTel("+33 1 42 60 30 30")}`}
-                  >
-                    +33 1 42 60 30 30
-                  </a>
-                  <a
-                    className="cta-call"
-                    href={`tel:${toTel("+33 1 42 60 30 30")}`}
-                  >
-                    <FiPhoneCall /> <span>Call Now</span>
-                  </a>
-                </div>
+{contacts.map((c) => (
+  <div key={c.id} className="contact-card">
+    <div className="contact-head">
+      <div className="qicon">
+        <FiUser />
+      </div>
+      <div className="qmain">
+        <div className="qtitle">{c.name}</div>
+        <div className="qsub">{c.relation || "Emergency Contact"}</div>
+      </div>
+    </div>
+
+    <a className="phone-chip" href={`tel:${toTel(c.phone)}`}>
+      {c.phone}
+    </a>
+
+    <div className="contact-actions">
+      <a className="cta-call" href={`tel:${toTel(c.phone)}`}>
+        <FiPhoneCall /> <span>Call Now</span>
+      </a>
+
+      <button
+        className="danger"
+        onClick={async () => {
+          await deleteEmergencyContact(c.id);
+          setContacts((prev) => prev.filter((x) => x.id !== c.id));
+        }}
+      >
+        Delete
+      </button>
+    </div>
+  </div>
+))}
+
+
               </div>
 
-              {/* AI Assistant card removed by request */}
             </aside>
 
             {/* Main content */}
             <section className="emer-main">
-              {/* Safety alerts card removed per request */}
 
               <div className="card">
                 <div className="list-head">
