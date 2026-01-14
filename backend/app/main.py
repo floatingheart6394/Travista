@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.database import engine, Base
-from app.routes import auth, users, todo, emergency_contact, ai_assistant
+from app.routes import auth, users, todo, emergency_contact, ai_assistant, planner
 
 app = FastAPI(title="Travista Backend")
 
@@ -24,6 +24,7 @@ app.include_router(users.router)
 app.include_router(todo.router)
 app.include_router(emergency_contact.router)
 app.include_router(ai_assistant.router)
+app.include_router(planner.router)
 
 @app.get("/")
 async def root():

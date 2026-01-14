@@ -19,6 +19,7 @@ const STYLES = [
   "Photography",
   "History",
 ];
+const API_URL = import.meta.env.VITE_API_BASE_URL;
 
 export default function PlannerPage() {
   const [destination, setDestination] = useState("");
@@ -26,6 +27,9 @@ export default function PlannerPage() {
   const [budget, setBudget] = useState("2500");
   const [travelers, setTravelers] = useState("2");
   const [tripStyles, setTripStyles] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [itinerary, setItinerary] = useState("");
+  const [error, setError] = useState("");
 
   const toggleStyle = (s) => {
     setTripStyles((prev) =>
@@ -33,7 +37,10 @@ export default function PlannerPage() {
     );
   };
 
-  const handleGenerate = () => {
+  const handleGenerate = async () => {
+    setError("");
+    setItinerary("");
+
     const payload = {
       destination: destination.trim(),
       duration: Number(duration) || 0,
@@ -41,14 +48,37 @@ export default function PlannerPage() {
       travelers: Number(travelers) || 1,
       tripStyles,
     };
-    // Placeholder for AI integration
-    alert(
-      `Generating itinerary for ${payload.destination || "(destination)"} — ${
-        payload.duration
-      } days, $${payload.budget}, ${payload.travelers} travelers, styles: ${
-        payload.tripStyles.join(", ") || "none"
-      }`
-    );
+
+    if (!payload.destination || payload.duration < 1) {
+      setError("Please enter a valid destination and duration.");
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const res = await fetch(`${API_URL}/planner/generate`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(payload),
+      });
+
+      if (!res.ok) {
+        const errText = await res.text();
+        console.error("Backend error:", errText);
+        throw new Error(errText);
+      }
+
+
+      const data = await res.json();
+      setItinerary(data.itinerary);
+    } catch (err) {
+      console.error(err);
+      setError("⚠️ Unable to generate itinerary. Please try again.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -133,13 +163,33 @@ export default function PlannerPage() {
             </div>
 
             <div className="planner-actions">
-              <button className="planner-generate" onClick={handleGenerate}>
+              <button className="planner-generate" onClick={handleGenerate} disabled={loading}>
                 <span className="bolt">
                   <FiZap />
                 </span>
                 Generate AI Itinerary
               </button>
             </div>
+            {loading && (
+              <p style={{ marginTop: "1rem" }}>
+                ⏳ Generating your personalized itinerary...
+              </p>
+            )}
+
+            {error && (
+              <p style={{ marginTop: "1rem", color: "red" }}>
+                {error}
+              </p>
+            )}
+
+            {itinerary && (
+              <div className="planner-result">
+                <h3>Your AI Itinerary</h3>
+                <pre style={{ whiteSpace: "pre-wrap" }}>
+                  {itinerary}
+                </pre>
+              </div>
+            )}
           </section>
 
           <aside className="planner-aside">
