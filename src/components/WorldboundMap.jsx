@@ -1,5 +1,5 @@
-import React, { useMemo } from "react";
-import { MapContainer, TileLayer, CircleMarker } from "react-leaflet";
+import React, { useMemo, useState, useEffect, useRef } from "react";
+import { MapContainer, TileLayer, CircleMarker, useMap } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 
 // Helper: normalize coordinate fields and validate
@@ -49,6 +49,58 @@ const WorldboundMap = React.memo(function WorldboundMap({ regions = [], onRegion
     return Number.isFinite(lat) && Number.isFinite(lng) ? [lat, lng] : [20, 0];
   }, [processed]);
 
+  // User location state (local only, not persisted)
+  const [userLocation, setUserLocation] = useState(null);
+  const [locationError, setLocationError] = useState(null);
+
+  // Request location once on mount
+  useEffect(() => {
+    if (!navigator || !navigator.geolocation) {
+      setLocationError("Geolocation unavailable");
+      return;
+    }
+    let mounted = true;
+    try {
+      navigator.geolocation.getCurrentPosition(
+        pos => {
+          if (!mounted) return;
+          const lat = Number(pos.coords.latitude);
+          const lng = Number(pos.coords.longitude);
+          if (Number.isFinite(lat) && Number.isFinite(lng)) {
+            setUserLocation({ latitude: lat, longitude: lng });
+          } else {
+            setLocationError("Invalid coordinates");
+          }
+        },
+        err => {
+          if (!mounted) return;
+          setLocationError(err && err.message ? String(err.message) : "Permission denied or unavailable");
+        },
+        { enableHighAccuracy: false, maximumAge: 60 * 1000, timeout: 5000 }
+      );
+    } catch (e) {
+      setLocationError("Geolocation error");
+    }
+    return () => { mounted = false; };
+  }, []);
+
+  // Component to set view once when userLocation first appears
+  function CenterOnceOnLocation({ loc }) {
+    const map = useMap();
+    const doneRef = useRef(false);
+    useEffect(() => {
+      if (!doneRef.current && loc && map) {
+        const lat = Number(loc.latitude);
+        const lng = Number(loc.longitude);
+        if (Number.isFinite(lat) && Number.isFinite(lng)) {
+          try { map.setView([lat, lng], Math.max(map.getZoom(), 6)); } catch (e) { /* ignore */ }
+          doneRef.current = true;
+        }
+      }
+    }, [loc, map]);
+    return null;
+  }
+
   return (
     <div className="wb-map-card">
       <div className="map-header">
@@ -56,7 +108,7 @@ const WorldboundMap = React.memo(function WorldboundMap({ regions = [], onRegion
         <p className="muted">Pan and zoom. Click a hotspot to reveal a memory.</p>
       </div>
       <div className="leaflet-wrap" style={{ height: 360, borderRadius: 10, overflow: 'hidden' }}>
-        <MapContainer center={center} zoom={3} scrollWheelZoom={true} style={{ height: '100%', width: '100%' }}>
+        <MapContainer center={center} zoom={3} scrollWheelZoom={true} style={{ height: '100%', width: '100%' }} whenCreated={map => { /* no-op to ensure map mounts */ }}>
           <TileLayer
             attribution='&copy; OpenStreetMap contributors'
             url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
@@ -75,6 +127,17 @@ const WorldboundMap = React.memo(function WorldboundMap({ regions = [], onRegion
               />
             );
           })}
+          {/* Render user location marker if available and valid */}
+          {userLocation && Number.isFinite(userLocation.latitude) && Number.isFinite(userLocation.longitude) ? (
+            <CircleMarker
+              center={[userLocation.latitude, userLocation.longitude]}
+              radius={6}
+              pathOptions={{ color: '#e07a5f', fillColor: '#e07a5f', fillOpacity: 0.9 }}
+              className="user-location-marker"
+            />
+          ) : null}
+          {/* Center map once on initial user location */}
+          {userLocation ? <CenterOnceOnLocation loc={userLocation} /> : null}
         </MapContainer>
       </div>
       <div className="map-footer muted">Hotspots are tied to quests and persist across refreshes.</div>
