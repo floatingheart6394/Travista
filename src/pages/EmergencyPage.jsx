@@ -51,41 +51,177 @@ export default function EmergencyPage() {
   const toTel = (p) => (p || "").replace(/[^+\d]/g, "");
   const navigate = useNavigate();
   const startWith = (q) => navigate(`/ai?q=${encodeURIComponent(q)}`);
+  const [showModal, setShowModal] = useState(false);
+  const [form, setForm] = useState({
+    name: "",
+    phone: "",
+    relation: "",
+  });
+  const [saving, setSaving] = useState(false);
+  const [userLocation, setUserLocation] = useState(null);
+  const [locationError, setLocationError] = useState(null);
+  const [places, setPlaces] = useState([]);
+  const [loadingPlaces, setLoadingPlaces] = useState(false);
+  const [search, setSearch] = useState("");
+  const [activeCategory, setActiveCategory] = useState("all");
+  const [showLocationModal, setShowLocationModal] = useState(false);
+  const [isTrackingLocation, setIsTrackingLocation] = useState(false);
+  const [sortByDistance, setSortByDistance] = useState(true);
+  const [showFilters, setShowFilters] = useState(false);
+  const [maxDistance, setMaxDistance] = useState(10); // km
+
+  const CATEGORY_CONFIG = {
+    all: {
+      label: "All Services",
+      tags: [
+        '["amenity"="hospital"]',
+        '["amenity"="police"]',
+        '["amenity"="pharmacy"]',
+        '["amenity"="fire_station"]',
+      ],
+      icon: <FiList />,
+    },
+    hospital: {
+      label: "Medical Facilities",
+      tags: ['["amenity"="hospital"]'],
+      icon: <FaHospitalAlt />,
+    },
+    police: {
+      label: "Law Enforcement",
+      tags: ['["amenity"="police"]'],
+      icon: <FiShield />,
+    },
+    pharmacy: {
+      label: "Pharmacies",
+      tags: ['["amenity"="pharmacy"]'],
+      icon: <FaCapsules />,
+    },
+    fire: {
+      label: "Fire Services",
+      tags: ['["amenity"="fire_station"]'],
+      icon: <FaFireExtinguisher />,
+    },
+  };
+
+  async function fetchNearbyPlaces(lat, lon, category) {
+    const tags = CATEGORY_CONFIG[category].tags;
+
+    const queryParts = tags
+      .map(
+        (tag) => `
+        node${tag}(around:5000,${lat},${lon});
+        way${tag}(around:5000,${lat},${lon});
+      `
+      )
+      .join("");
+
+    const query = `
+    [out:json];
+    (
+      ${queryParts}
+    );
+    out center tags;
+  `;
+
+    const res = await fetch("https://overpass-api.de/api/interpreter", {
+      method: "POST",
+      body: query,
+    });
+
+    const data = await res.json();
+    return data.elements;
+  }
+
+  useEffect(() => {
+    if (!navigator.geolocation) {
+      setLocationError("Geolocation not supported");
+      setShowLocationModal(true);
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        setUserLocation({
+          lat: pos.coords.latitude,
+          lon: pos.coords.longitude,
+        });
+        setIsTrackingLocation(true);
+        setShowLocationModal(false);
+      },
+      () => {
+        setIsTrackingLocation(false);
+        setShowLocationModal(true);
+      }
+    );
+  }, []);
+
+  useEffect(() => {
+    if (!userLocation) return;
+
+    async function loadPlaces() {
+      setLoadingPlaces(true);
+      try {
+        const data = await fetchNearbyPlaces(
+          userLocation.lat,
+          userLocation.lon,
+          activeCategory
+        );
+        setPlaces(data);
+      } catch (err) {
+        console.error(err);
+      } finally {
+        setLoadingPlaces(false);
+      }
+    }
+
+    loadPlaces();
+  }, [userLocation, activeCategory]);
 
   const categories = [
-    { icon: <FaClinicMedical />, label: "Medical Facilities", count: 8 },
-    { icon: <FiShield />, label: "Law Enforcement", count: 5 },
-    { icon: <FaCapsules />, label: "Pharmacies", count: 12 },
-    { icon: <FiDollarSign />, label: "Financial Services", count: 15 },
-    { icon: <FiFlag />, label: "Diplomatic Services", count: 1 },
-    { icon: <FiHome />, label: "Walk-in Clinics", count: 6, active: true },
+    { key: "all", icon: <FiList />, label: "All Services" },
+    { key: "hospital", icon: <FaClinicMedical />, label: "Medical Facilities" },
+    { key: "police", icon: <FiShield />, label: "Law Enforcement" },
+    { key: "pharmacy", icon: <FaCapsules />, label: "Pharmacies" },
+    { key: "fire", icon: <FaFireExtinguisher />, label: "Fire Services" },
   ];
 
-  const listings = [
-    {
-      name: "Hôpital Européen Georges-Pompidou",
-      type: "Emergency Department",
-      address: "20 Rue Leblanc, 75015 Paris, France",
-      rating: 4.3,
-      reviews: 892,
-      phone: "+33 1 56 09 20 00",
-      distance: "1.2 km",
-      open: true,
-      tags: ["Emergency Care", "Trauma", "ICU"],
-    },
-    {
-      name: "Hôpital Saint-Joseph",
-      type: "General Hospital",
-      address: "185 Rue Raymond Losserand, 75014 Paris",
-      rating: 4.1,
-      reviews: 654,
-      phone: "+33 1 44 12 33 33",
-      distance: "2.4 km",
-      open: true,
-      tags: ["Emergency", "Surgery", "Cardiology"],
-    },
-  ];
+  const filteredPlaces = places
+    .filter((p) =>
+      (p.tags?.name || "")
+        .toLowerCase()
+        .includes(search.toLowerCase())
+    )
+    .map((p) => {
+      const lat = p.lat ?? p.center?.lat;
+      const lon = p.lon ?? p.center?.lon;
+      if (!lat || !lon || !userLocation) return null;
 
+      return {
+        ...p,
+        _distance: Number(getDistanceKm(
+          userLocation.lat,
+          userLocation.lon,
+          lat,
+          lon
+        )),
+      };
+    })
+    .filter(Boolean) 
+    .filter((p) => p._distance <= maxDistance)
+    .sort((a, b) => sortByDistance ? a._distance - b._distance : 0);
+
+  function getDistanceKm(lat1, lon1, lat2, lon2) {
+    const R = 6371; // km
+    const dLat = ((lat2 - lat1) * Math.PI) / 180;
+    const dLon = ((lon2 - lon1) * Math.PI) / 180;
+    const a =
+      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+      Math.cos((lat1 * Math.PI) / 180) *
+      Math.cos((lat2 * Math.PI) / 180) *
+      Math.sin(dLon / 2) *
+      Math.sin(dLon / 2);
+    return (R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))).toFixed(1);
+  }
   return (
     <div className="dashboard-page">
       <NewNavbar />
@@ -99,12 +235,37 @@ export default function EmergencyPage() {
               </span>
               <div>
                 <div className="loc-title">
-                  Current Location <span className="chip active">Active</span>
+                  Current Location <span className={`chip ${isTrackingLocation ? "active" : ""}`}>
+                    {isTrackingLocation ? "Active" : "Not Active"}
+                  </span>
                 </div>
-                <div className="loc-sub">Paris, Île-de-France, France</div>
+                <div className="loc-sub">
+                  {userLocation
+                    ? "Using your current location"
+                    : "Location access not enabled"}
+                </div>
               </div>
             </div>
-            <button className="textlink">Change Location</button>
+            <div className="loc-actions">
+              {isTrackingLocation ? (
+                <button
+                  className="textlink"
+                  onClick={() => {
+                    setUserLocation(null);
+                    setIsTrackingLocation(false);
+                  }}
+                >
+                  Stop Location
+                </button>
+              ) : (
+                <button
+                  className="textlink"
+                  onClick={() => setShowLocationModal(true)}
+                >
+                  Enable Location
+                </button>
+              )}
+            </div>
           </section>
 
           {/* Hotlines */}
@@ -170,10 +331,14 @@ export default function EmergencyPage() {
           <div className="emer-searchbar">
             <div className="search-wrap">
               <FiSearch />
-              <input placeholder="Search for services, facilities, or addresses..." />
+              <input
+                placeholder="Search for services..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+              />
             </div>
             <div className="actions">
-              <button className="outline">
+              <button className="outline" onClick={() => setShowFilters(true)}>
                 <FiFilter /> Filters
               </button>
               <div className="toggle">
@@ -200,12 +365,15 @@ export default function EmergencyPage() {
               <div className="card">
                 <h3>Service Categories</h3>
                 <ul className="cat-list">
-                  <li className="cat-all">All Services</li>
                   {categories.map((c) => (
-                    <li key={c.label} className={c.active ? "active" : ""}>
+                    <li
+                      key={c.key}
+                      className={activeCategory === c.key ? "active" : ""}
+                      onClick={() => setActiveCategory(c.key)}
+                      style={{ cursor: "pointer" }}
+                    >
                       <span className="cat-ico">{c.icon}</span>
                       <span className="cat-name">{c.label}</span>
-                      <span className="cat-count">{c.count}</span>
                     </li>
                   ))}
                 </ul>
@@ -214,54 +382,121 @@ export default function EmergencyPage() {
               <div className="card contacts">
                 <div className="card-head">
                   <h3>Emergency Contacts</h3>
-                  <button className="icon-sm"
-                    aria-label="Add contact"
-                    disabled={contacts.length >= 3}
-                    title={contacts.length >= 3 ? "Max 3 contacts allowed" : "Add contact"}>
-                    <FiPlus />
-                  </button>
+                  {contacts.length < 3 && (
+                    <button
+                      className="icon-sm"
+                      aria-label="Add contact"
+                      title="Add contact"
+                      onClick={() => setShowModal(true)}
+                    >
+                      <FiPlus />
+                    </button>
+                  )}
+                  {showModal && (
+                    <div className="modal-backdrop">
+                      <div className="modal">
+                        <h3>Add Emergency Contact</h3>
+
+                        <input
+                          type="text"
+                          placeholder="Contact Name"
+                          value={form.name}
+                          onChange={(e) => setForm({ ...form, name: e.target.value })}
+                        />
+
+                        <input
+                          type="tel"
+                          placeholder="Phone Number"
+                          value={form.phone}
+                          onChange={(e) => setForm({ ...form, phone: e.target.value })}
+                        />
+
+                        <input
+                          type="text"
+                          placeholder="Relation (optional)"
+                          value={form.relation}
+                          onChange={(e) => setForm({ ...form, relation: e.target.value })}
+                        />
+
+                        <div className="modal-actions">
+                          <button
+                            className="outline"
+                            onClick={() => {
+                              setShowModal(false);
+                              setForm({ name: "", phone: "", relation: "" });
+                            }}
+                          >
+                            Cancel
+                          </button>
+
+                          <button
+                            className="primary"
+                            disabled={saving}
+                            onClick={async () => {
+                              if (!form.name || !form.phone) {
+                                alert("Name and phone are required");
+                                return;
+                              }
+
+                              try {
+                                setSaving(true);
+                                const newContact = await addEmergencyContact(form);
+                                setContacts((prev) => [...prev, newContact]);
+                                setShowModal(false);
+                                setForm({ name: "", phone: "", relation: "" });
+                              } catch (err) {
+                                alert(err.message || "Failed to add contact");
+                              } finally {
+                                setSaving(false);
+                              }
+                            }}
+                          >
+                            {saving ? "Saving..." : "Save Contact"}
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
                 </div>
 
                 {loadingContacts && <p>Loading contacts...</p>}
-{error && <p className="error">{error}</p>}
+                {error && <p className="error">{error}</p>}
 
-{contacts.map((c) => (
-  <div key={c.id} className="contact-card">
-    <div className="contact-head">
-      <div className="qicon">
-        <FiUser />
-      </div>
-      <div className="qmain">
-        <div className="qtitle">{c.name}</div>
-        <div className="qsub">{c.relation || "Emergency Contact"}</div>
-      </div>
-    </div>
+                {contacts.map((c) => (
+                  <div key={c.id} className="contact-card">
+                    <div className="contact-head">
+                      <div className="qicon">
+                        <FiUser />
+                      </div>
+                      <div className="qmain">
+                        <div className="qtitle">{c.name}</div>
+                        <div className="qsub">{c.relation || "Emergency Contact"}</div>
+                      </div>
+                    </div>
 
-    <a className="phone-chip" href={`tel:${toTel(c.phone)}`}>
-      {c.phone}
-    </a>
+                    <a className="phone-chip" href={`tel:${toTel(c.phone)}`}>
+                      {c.phone}
+                    </a>
 
-    <div className="contact-actions">
-      <a className="cta-call" href={`tel:${toTel(c.phone)}`}>
-        <FiPhoneCall /> <span>Call Now</span>
-      </a>
+                    <div className="contact-actions">
+                      <a className="cta-call" href={`tel:${toTel(c.phone)}`}>
+                        <FiPhoneCall /> <span>Call Now</span>
+                      </a>
 
-      <button
-        className="danger"
-        onClick={async () => {
-          await deleteEmergencyContact(c.id);
-          setContacts((prev) => prev.filter((x) => x.id !== c.id));
-        }}
-      >
-        Delete
-      </button>
-    </div>
-  </div>
-))}
-
-
+                      <button
+                        className="danger"
+                        onClick={async () => {
+                          await deleteEmergencyContact(c.id);
+                          setContacts((prev) => prev.filter((x) => x.id !== c.id));
+                        }}
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  </div>
+                ))}
               </div>
-
             </aside>
 
             {/* Main content */}
@@ -270,53 +505,89 @@ export default function EmergencyPage() {
               <div className="card">
                 <div className="list-head">
                   <h3>
-                    Nearby Locations <span className="muted">(4 results)</span>
+                    Nearby {CATEGORY_CONFIG[activeCategory].label}{" "}
+                    <span className="muted">({filteredPlaces.length} results)</span>
                   </h3>
-                  <div className="sortby">
-                    Sort by <strong>Distance</strong> ▾
+                  <div
+                    className="sortby"
+                    style={{ cursor: "pointer" }}
+                    onClick={() => setSortByDistance((prev) => !prev)}
+                  >
+                    Sort by{" "}
+                    <strong>
+                      {sortByDistance ? "Distance" : "Default"}
+                    </strong>{" "}
+                    ▾
                   </div>
                 </div>
                 <div className="listings">
-                  {listings.map((it) => (
-                    <article key={it.name} className="place">
-                      <div className="pl-ico">
-                        <FaHospitalAlt />
-                      </div>
-                      <div className="pl-main">
-                        <h4>{it.name}</h4>
-                        <div className="pl-type">{it.type}</div>
-                        <div className="pl-meta">📍 {it.address}</div>
-                        <div className="pl-rate">
-                          ⭐ {it.rating}{" "}
-                          <span className="muted">({it.reviews} reviews)</span>{" "}
-                          ☎ {it.phone}
+                  {loadingPlaces && (
+                    <p>
+                      Loading nearby {CATEGORY_CONFIG[activeCategory].label.toLowerCase()}...
+                    </p>
+                  )}
+                  {filteredPlaces.map((p) => {
+                    const name = p.tags?.name || "Unnamed Service";
+                    const address =
+                      p.tags?.["addr:full"] ||
+                      `${p.tags?.["addr:street"] || ""} ${p.tags?.["addr:city"] || ""}`;
+
+                    const lat = p.lat ?? p.center?.lat;
+                    const lon = p.lon ?? p.center?.lon;
+
+                    // 🚨 VERY IMPORTANT SAFETY CHECK
+                    if (!lat || !lon) return null;
+
+                    const distance = userLocation
+                      ? getDistanceKm(
+                        userLocation.lat,
+                        userLocation.lon,
+                        lat,
+                        lon
+                      )
+                      : null;
+                    const amenity = p.tags?.amenity || "service";
+                    const phone = p.tags?.phone || p.tags?.["contact:phone"];
+
+                    return (
+                      <article key={p.id} className="place">
+                        <div className="pl-ico">
+                          <FaHospitalAlt />
                         </div>
-                        <div className="pl-tags">
-                          {it.tags.map((t) => (
-                            <span key={t} className="tag">
-                              {t}
-                            </span>
-                          ))}
+
+                        <div className="pl-main">
+                          <h4>{name}</h4>
+
+                          {/* ✅ USE IT HERE */}
+                          <div className="pl-type">
+                            {amenity.charAt(0).toUpperCase() + amenity.slice(1)}
+                          </div>
+                          <div className="pl-meta">
+                            📍 {address || "Address not available"}
+                          </div>
                         </div>
-                      </div>
-                      <div className="pl-actions">
-                        <div className="distance">
-                          <strong>{it.distance}</strong>
-                          <span className="open chip green">Open 24 Hours</span>
+
+                        <div className="pl-actions">
+                          {distance && <div className="distance">{distance} km away</div>}
+                          <div className="buttons">
+                            <a
+                              className="primary"
+                              href={`https://www.openstreetmap.org/?mlat=${lat}&mlon=${lon}#map=17/${lat}/${lon}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                            >
+                              Get Directions
+                            </a>
+                            {phone && (
+                              <a href={`tel:${toTel(phone)}`} className="outline">
+                                <FiPhoneCall /> Call
+                              </a>
+                            )}
+                          </div>
                         </div>
-                        <div className="buttons">
-                          <button className="primary">Get Directions</button>
-                          <a
-                            className="outline"
-                            href={`tel:${toTel(it.phone)}`}
-                          >
-                            <FiPhoneCall /> Call Now
-                          </a>
-                          <button className="link">Details</button>
-                        </div>
-                      </div>
-                    </article>
-                  ))}
+                      </article>
+                    );
+                  })}
                 </div>
               </div>
 
@@ -340,6 +611,84 @@ export default function EmergencyPage() {
           </div>
         </div>
       </main>
+      {showLocationModal && (
+        <div className="modal-backdrop">
+          <div className="modal">
+            <h3>Allow Location Access</h3>
+
+            <p>
+              We need your location to show nearby emergency services like hospitals,
+              police stations, pharmacies, and fire departments.
+            </p>
+
+            {locationError && (
+              <p className="error">{locationError}</p>
+            )}
+
+            <div className="modal-actions">
+              <button
+                className="outline"
+                onClick={() => setShowLocationModal(false)}
+              >
+                Continue without location
+              </button>
+
+              <button
+                className="primary"
+                onClick={() => {
+                  setShowLocationModal(false);
+                  navigator.geolocation.getCurrentPosition(
+                    (pos) => {
+                      setUserLocation({
+                        lat: pos.coords.latitude,
+                        lon: pos.coords.longitude,
+                      });
+                    },
+                    () => {
+                      setLocationError(
+                        "Location permission denied. Please enable it from browser settings."
+                      );
+                      setShowLocationModal(true);
+                    }
+                  );
+                }}
+              >
+                Enable Location
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {
+        showFilters && (
+          <div className="modal-backdrop">
+            <div className="modal">
+              <h3>Filters</h3>
+
+              <label>
+                Maximum distance: <strong>{maxDistance} km</strong>
+              </label>
+
+              <input
+                type="range"
+                min="1"
+                max="25"
+                value={maxDistance}
+                onChange={(e) => setMaxDistance(Number(e.target.value))}
+              />
+
+              <div className="modal-actions">
+                <button
+                  className="outline"
+                  onClick={() => setShowFilters(false)}
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+          </div>
+        )
+      }
     </div>
   );
 }
