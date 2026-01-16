@@ -29,7 +29,7 @@ async def generate_itinerary(payload: TripPlannerRequest):
     Duration: {payload.duration} days
     Budget: ${payload.budget}
     Travelers: {payload.travelers}
-    Style: {", ".join(payload.tripStyles) or "General"}
+    Style: {", ".join(payload.trip_styles) or "General"}
 
     Day 1: Arrival & city exploration
     Day 2: Local attractions & food tour

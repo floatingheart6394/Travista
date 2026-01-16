@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   FiMapPin,
   FiCalendar,
@@ -12,10 +12,10 @@ const STYLES = [
   "Adventure",
   "Relaxation",
   "Culture",
-  "Food",
-  "Nightlife",
+  "Devotional",
+  "Family",
   "Nature",
-  "Shopping",
+  "Friends",
   "Photography",
   "History",
 ];
@@ -23,13 +23,42 @@ const API_URL = import.meta.env.VITE_API_BASE_URL;
 
 export default function PlannerPage() {
   const [destination, setDestination] = useState("");
-  const [duration, setDuration] = useState("7");
-  const [budget, setBudget] = useState("2500");
-  const [travelers, setTravelers] = useState("2");
+  const [duration, setDuration] = useState("");
+  const [budget, setBudget] = useState("");
+  const [travelers, setTravelers] = useState("");
   const [tripStyles, setTripStyles] = useState([]);
   const [loading, setLoading] = useState(false);
   const [itinerary, setItinerary] = useState("");
   const [error, setError] = useState("");
+
+ /* useEffect(() => {
+    async function loadTrip() {
+      try {
+        const res = await fetch(`${API_URL}/trip/active`, {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("access_token")}`,
+          },
+        });
+
+        if (res.status === 401) {
+          console.error("Unauthorized – token missing or invalid");
+          return;
+        }
+        const trip = await res.json();
+
+        setDestination(trip.destination ?? "");
+        setDuration(trip.duration ?? "");
+        setBudget(trip.budget ?? "");
+        setTravelers(trip.travelers ?? "");
+        setTripStyles(trip.trip_styles ?? []);
+      } catch (err) {
+        console.error("Failed to load trip", err);
+      }
+    }
+
+    loadTrip();
+  }, []);
+  */
 
   const toggleStyle = (s) => {
     setTripStyles((prev) =>
@@ -46,7 +75,7 @@ export default function PlannerPage() {
       duration: Number(duration) || 0,
       budget: Number(budget) || 0,
       travelers: Number(travelers) || 1,
-      tripStyles,
+      trip_styles: tripStyles,
     };
 
     if (!payload.destination || payload.duration < 1) {
@@ -56,10 +85,19 @@ export default function PlannerPage() {
 
     try {
       setLoading(true);
+      await fetch(`${API_URL}/trip/`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${localStorage.getItem("access_token")}`,
+        },
+        body: JSON.stringify(payload),
+      });
       const res = await fetch(`${API_URL}/planner/generate`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          Authorization: `Bearer ${localStorage.getItem("access_token")}`,
         },
         body: JSON.stringify(payload),
       });
@@ -106,10 +144,11 @@ export default function PlannerPage() {
                   <span className="ico">
                     <FiCalendar />
                   </span>
-                  <span className="label">Trip Duration</span>
+                  <span className="label">Trip Duration (days)</span>
                 </div>
                 <input
                   type="number"
+                  placeholder="0"
                   min="1"
                   value={duration}
                   onChange={(e) => setDuration(e.target.value)}
@@ -124,6 +163,7 @@ export default function PlannerPage() {
                 </div>
                 <input
                   type="number"
+                  placeholder="0"
                   min="0"
                   value={budget}
                   onChange={(e) => setBudget(e.target.value)}
@@ -141,6 +181,7 @@ export default function PlannerPage() {
               <input
                 type="number"
                 min="1"
+                placeholder="0"
                 value={travelers}
                 onChange={(e) => setTravelers(e.target.value)}
               />

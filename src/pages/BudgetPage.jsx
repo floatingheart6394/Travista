@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import NewNavbar from "../components/NewNavbar";
 import { Doughnut, Bar, Line } from "react-chartjs-2";
 import {
@@ -25,69 +25,101 @@ ChartJS.register(
   LineElement,
   PointElement
 );
-
+const API_URL = import.meta.env.VITE_API_BASE_URL;
 const categories = [
   { key: "food", label: "Food" },
   { key: "stay", label: "Stay" },
   { key: "transport", label: "Transport" },
   { key: "shopping", label: "Shopping" },
-  { key: "tickets", label: "Tickets" },
+  { key: "activities", label: "Activities" },
   { key: "misc", label: "Miscellaneous" },
 ];
 
 export default function BudgetPage() {
-  const [tripBudget, setTripBudget] = useState(3000);
-  const [startDate] = useState(new Date());
-  const [endDate] = useState(new Date(Date.now() + 3 * 24 * 60 * 60 * 1000));
-  const [expenses, setExpenses] = useState([
-    {
-      id: 1,
-      place: "Eiffel Tower Tickets",
-      amount: 45,
-      category: "activities",
-      date: new Date("2026-01-05"),
-      source: "manual",
-    },
-    {
-      id: 2,
-      place: "Le Comptoir Dinner",
-      amount: 85,
-      category: "food",
-      date: new Date("2026-01-05"),
-      source: "manual",
-    },
-    {
-      id: 3,
-      place: "Hotel Renaissance",
-      amount: 180,
-      category: "stay",
-      date: new Date("2026-01-04"),
-      source: "manual",
-    },
-    {
-      id: 4,
-      place: "Metro Pass (Week)",
-      amount: 22,
-      category: "transport",
-      date: new Date("2026-01-04"),
-      source: "manual",
-    },
-    {
-      id: 5,
-      place: "Souvenir Shop",
-      amount: 35,
-      category: "shopping",
-      date: new Date("2026-01-03"),
-      source: "manual",
-    },
-  ]);
+  const [tripBudget, setTripBudget] = useState(0);
+  const [startDate, setStartDate] = useState(null);
+  const [endDate, setEndDate] = useState(null);
+  const [expenses, setExpenses] = useState([]);
+  const [activeTripId, setActiveTripId] = useState(null);
   const [scanDraft, setScanDraft] = useState(null);
   const [people, setPeople] = useState(["Priya", "Riya", "Arjun"]);
+  const [tripDestination, setTripDestination] = useState("");
+  const [manualExpense, setManualExpense] = useState({
+    place: "",
+    amount: "",
+    category: "food",
+    date: new Date().toISOString().slice(0, 10),
+  });
+
+  async function fetchExpenses(tripId) {
+    if (!tripId) return;
+
+    try {
+      const res = await fetch(
+        `${API_URL}/budget/expenses/?trip_id=${tripId}`,
+        {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("access_token")}`,
+          },
+        }
+      );
+
+      if (!res.ok) return;
+
+      const data = await res.json();
+      setExpenses(
+        data.map((e) => ({
+          ...e,
+          date: new Date(e.date),
+        }))
+      );
+    } catch (err) {
+      console.error("Failed to fetch expenses", err);
+    }
+  }
+
+  useEffect(() => {
+    async function loadBudgetData() {
+      try {
+        const token = localStorage.getItem("access_token");
+
+        const tripRes = await fetch(`${API_URL}/trip/active`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+
+        if (!tripRes.ok) return;
+
+        const trip = await tripRes.json();
+
+        setActiveTripId(trip.id);              // ✅ STORE trip id
+        setTripBudget(trip.budget ?? 0);
+        setTripDestination(trip.destination ?? "");
+        // derive dates from duration
+        const start = new Date();
+        const end = new Date(
+          Date.now() + (trip.duration || 1) * 24 * 60 * 60 * 1000
+        );
+
+        setStartDate(start);
+        setEndDate(end);
+
+        // ✅ FETCH EXPENSES FOR THIS TRIP ONLY
+        await fetchExpenses(trip.id);
+
+      } catch (err) {
+        console.error(err);
+      }
+    }
+
+    loadBudgetData();
+  }, []);
 
   const daysLeft = useMemo(() => {
-    const diff = endDate.getTime() - Date.now();
+    if (!endDate) return 0;
+    const diff = new Date(endDate).getTime() - Date.now();
     return Math.max(0, Math.ceil(diff / (24 * 60 * 60 * 1000)));
   }, [endDate]);
+
 
   const totalSpent = useMemo(
     () => expenses.reduce((s, e) => s + Number(e.amount || 0), 0),
@@ -101,13 +133,66 @@ export default function BudgetPage() {
   const ringColor =
     budgetPct < 60 ? "#22c55e" : budgetPct < 85 ? "#eab308" : "#ef4444";
 
-  function addExpense(exp) {
-    setExpenses((prev) => [{ id: Date.now(), ...exp }, ...prev]);
+  async function addExpense(exp) {
+    try {
+      await fetch(`${API_URL}/budget/expense/`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${localStorage.getItem("access_token")}`,
+        },
+        body: JSON.stringify(exp),
+      });
+
+      await fetchExpenses(activeTripId);
+    } catch (err) {
+      console.error("Failed to add expense", err);
+    }
   }
 
-  function deleteExpense(id) {
-    setExpenses((prev) => prev.filter((e) => e.id !== id));
+  async function submitManualExpense() {
+    if (!manualExpense.place || !manualExpense.amount) {
+      alert("Please enter place and amount");
+      return;
+    }
+
+    await addExpense({
+      place: manualExpense.place,
+      amount: Number(manualExpense.amount),
+      category: manualExpense.category,
+      date: manualExpense.date,
+      source: "manual",
+      trip_id: activeTripId,
+    });
+
+    // reset form
+    setManualExpense({
+      place: "",
+      amount: "",
+      category: "food",
+      date: new Date().toISOString().slice(0, 10),
+    });
   }
+
+
+  async function deleteExpense(id) {
+    if (!window.confirm("Delete this expense?")) return;
+
+    try {
+      await fetch(`${API_URL}/budget/expense/${id}`, {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("access_token")}`,
+        },
+      });
+
+      await fetchExpenses(activeTripId);
+    } catch (err) {
+      console.error(err);
+    }
+  }
+
+
 
   // OCR stub: pulls amount from filename if present, allows edit before confirm
   function handleScanFile(file) {
@@ -132,22 +217,23 @@ export default function BudgetPage() {
     return map;
   }, [expenses]);
 
-  const donutData = {
-    labels: ["Accommodation", "Food", "Transport", "Shopping", "Activities"],
+  const donutData = useMemo(() => ({
+    labels: categories.map(c => c.label),
     datasets: [
       {
-        data: [800, 450, 350, 200, 600],
+        data: categories.map(c => byCategory[c.key] || 0),
         backgroundColor: [
           "#3b82f6",
           "#10b981",
           "#8b5cf6",
           "#f59e0b",
           "#ef5da8",
+          "#64748b",
         ],
         borderWidth: 0,
       },
     ],
-  };
+  }), [byCategory]);
 
   const byDay = useMemo(() => {
     const map = {};
@@ -162,58 +248,116 @@ export default function BudgetPage() {
   }, [expenses]);
 
   const avgDaily = useMemo(() => {
-    const days = byDay.length || 1;
-    return Math.round(totalSpent / days);
+    const daysSoFar = Math.max(1, byDay.length);
+    return Math.round(totalSpent / daysSoFar);
   }, [totalSpent, byDay]);
 
-  const barData = {
-    labels: ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"],
-    datasets: [
-      {
-        label: "Daily Spending",
-        data: [130, 280, 330, 160, 400, 300, 240],
-        backgroundColor: "#14b8a6",
-      },
-    ],
-  };
 
-  const lineData = {
-    labels: ["Week 1", "Week 2", "Week 3", "Week 4"],
-    datasets: [
-      {
-        label: "Budgeted",
-        data: [800, 800, 800, 600],
-        borderColor: "#3b82f6",
-        backgroundColor: "#3b82f6",
-        tension: 0.3,
-      },
-      {
-        label: "Actual",
-        data: [650, 750, 900, 500],
-        borderColor: "#10b981",
-        backgroundColor: "#10b981",
-        tension: 0.3,
-      },
-    ],
-  };
+  const barData = useMemo(() => {
+    const map = {};
+
+    expenses.forEach((e) => {
+      const day = new Date(e.date).toLocaleDateString(undefined, {
+        weekday: "short",
+      });
+      map[day] = (map[day] || 0) + e.amount;
+    });
+
+    return {
+      labels: Object.keys(map),
+      datasets: [
+        {
+          label: "Daily Spending",
+          data: Object.values(map),
+          backgroundColor: "#14b8a6",
+        },
+      ],
+    };
+  }, [expenses]);
+
+
+  const lineData = useMemo(() => {
+    const cumulative = [];
+    let sum = 0;
+
+    expenses
+      .sort((a, b) => new Date(a.date) - new Date(b.date))
+      .forEach((e) => {
+        sum += e.amount;
+        cumulative.push(sum);
+      });
+
+    return {
+      labels: cumulative.map((_, i) => `Day ${i + 1}`),
+      datasets: [
+        {
+          label: "Actual Spending",
+          data: cumulative,
+          borderColor: "#10b981",
+          backgroundColor: "#10b981",
+          tension: 0.3,
+        },
+        {
+          label: "Budget",
+          data: cumulative.map(() => tripBudget),
+          borderColor: "#3b82f6",
+          backgroundColor: "#3b82f6",
+          borderDash: [5, 5],
+          tension: 0.3,
+        },
+      ],
+    };
+  }, [expenses, tripBudget]);
 
   const insights = useMemo(() => {
+    if (!expenses.length || tripBudget === 0) {
+      return ["Start adding expenses to get smart insights."];
+    }
+
     const tips = [];
-    const foodShare = totalSpent
-      ? Math.round((byCategory.food / totalSpent) * 100)
-      : 0;
-    if (foodShare > 35)
-      tips.push(`You spent ${foodShare}% on food – try cheaper places nearby.`);
-    const avgPerDay = byDay.length ? Math.round(totalSpent / byDay.length) : 0;
-    const projected = avgPerDay * daysLeft;
-    if (projected > 0)
+
+    // 1️⃣ Highest spending category
+    const categoryTotals = {};
+    expenses.forEach((e) => {
+      categoryTotals[e.category] =
+        (categoryTotals[e.category] || 0) + e.amount;
+    });
+
+    const [topCategory, topAmount] = Object.entries(categoryTotals).sort(
+      (a, b) => b[1] - a[1]
+    )[0];
+
+    const categoryPct = Math.round((topAmount / totalSpent) * 100);
+
+    tips.push(
+      `${categoryLabel(topCategory)} accounts for ${categoryPct}% of your spending. Consider reviewing these expenses.`
+    );
+
+    // 2️⃣ Budget health
+    if (budgetPct < 60) {
+      tips.push("You are well within your budget. Great job managing expenses!");
+    } else if (budgetPct < 85) {
+      tips.push("You’ve used more than half of your budget. Keep an eye on daily spending.");
+    } else {
+      tips.push("⚠️ Budget usage is high. You may exceed your planned budget.");
+    }
+
+    // 3️⃣ Spending pace projection
+    const daysSpent = byDay.length || 1;
+    const avgPerDay = Math.round(totalSpent / daysSpent);
+    const projectedTotal = avgPerDay * (daysSpent + daysLeft);
+
+    if (projectedTotal > tripBudget) {
       tips.push(
-        `You may spend approx ₹${projected} in the next ${daysLeft} days.`
+        `At the current pace, you may exceed your budget by ₹${projectedTotal - tripBudget}.`
       );
-    if (totalSpent <= tripBudget)
-      tips.push("You are on track to finish within budget.");
-    return tips;
-  }, [byCategory, totalSpent, byDay, daysLeft, tripBudget]);
+    } else {
+      tips.push("Your current spending pace aligns well with your budget.");
+    }
+
+    return tips.slice(0, 3); // keep UI clean
+  }, [expenses, totalSpent, tripBudget, budgetPct, byDay, daysLeft]);
+
 
   function downloadPDF() {
     const doc = new jsPDF();
@@ -224,8 +368,7 @@ export default function BudgetPage() {
     let y = 70;
     expenses.slice(0, 20).forEach((e) => {
       doc.text(
-        `${new Date(e.date).toLocaleDateString()} - ${e.place} - ₹${
-          e.amount
+        `${new Date(e.date).toLocaleDateString()} - ${e.place} - ₹${e.amount
         } - ${e.category}`,
         20,
         y
@@ -267,7 +410,7 @@ export default function BudgetPage() {
           <h1>
             Budget Tracker <span>💰</span>
           </h1>
-          <p>Smart expense management for your Paris trip</p>
+          <p>Smart expense management for your {tripDestination || "trip"} trip...</p>
         </section>
 
         {/* Metric Cards */}
@@ -275,7 +418,10 @@ export default function BudgetPage() {
           <div className="metric-card metric--brand">
             <h4>Total Budget</h4>
             <div className="metric-amount">${tripBudget.toLocaleString()}</div>
-            <div className="metric-sub">Paris Getaway 2026</div>
+            <div className="metric-sub">{tripDestination
+              ? `${tripDestination} Getaway`
+              : "Your Trip"}
+            </div>
           </div>
           <div className="metric-card">
             <h4>Amount Spent</h4>
@@ -343,7 +489,10 @@ export default function BudgetPage() {
               </select>
               <button
                 onClick={() => {
-                  addExpense(scanDraft);
+                  addExpense({
+                    ...scanDraft,
+                    trip_id: activeTripId,
+                  });
                   setScanDraft(null);
                 }}
               >
@@ -370,26 +519,14 @@ export default function BudgetPage() {
                   <Doughnut data={donutData} />
                 </div>
                 <ul className="chart-legend">
-                  <li>
-                    <span className="dot blue" /> Accommodation{" "}
-                    <strong>$800</strong>
-                  </li>
-                  <li>
-                    <span className="dot teal" /> Food <strong>$450</strong>
-                  </li>
-                  <li>
-                    <span className="dot purple" /> Transport{" "}
-                    <strong>$350</strong>
-                  </li>
-                  <li>
-                    <span className="dot amber" /> Shopping{" "}
-                    <strong>$200</strong>
-                  </li>
-                  <li>
-                    <span className="dot pink" /> Activities{" "}
-                    <strong>$600</strong>
-                  </li>
+                  {categories.map(c => (
+                    <li key={c.key}>
+                      <span className={`dot ${c.key}`} />
+                      {c.label} <strong>${byCategory[c.key] || 0}</strong>
+                    </li>
+                  ))}
                 </ul>
+
               </div>
             </div>
             <div className="chart-card">
@@ -401,6 +538,56 @@ export default function BudgetPage() {
             </div>
           </div>
           <aside className="right">
+            <div className="manual-expense card">
+              <h3>Add Expense</h3>
+
+              <input
+                placeholder="Place / Description"
+                value={manualExpense.place}
+                onChange={(e) =>
+                  setManualExpense({ ...manualExpense, place: e.target.value })
+                }
+              />
+
+              <input
+                type="number"
+                placeholder="Amount"
+                value={manualExpense.amount}
+                onChange={(e) =>
+                  setManualExpense({ ...manualExpense, amount: e.target.value })
+                }
+              />
+
+              <select
+                value={manualExpense.category}
+                onChange={(e) =>
+                  setManualExpense({ ...manualExpense, category: e.target.value })
+                }
+              >
+                {categories.map((c) => (
+                  <option key={c.key} value={c.key}>
+                    {c.label}
+                  </option>
+                ))}
+              </select>
+
+              <input
+                type="date"
+                value={manualExpense.date}
+                onChange={(e) =>
+                  setManualExpense({ ...manualExpense, date: e.target.value })
+                }
+              />
+
+              <button
+                className="cta"
+                disabled={!activeTripId}
+                onClick={submitManualExpense}
+              >
+                Add Expense
+              </button>
+            </div>
+
             <div className="recent">
               <div className="recent-header">
                 <h3>Recent Expenses</h3>
@@ -422,7 +609,15 @@ export default function BudgetPage() {
                         })}
                       </span>
                     </div>
+
+                    <button
+                      className="delete-btn"
+                      onClick={() => deleteExpense(e.id)}
+                    >
+                      🗑️
+                    </button>
                   </div>
+
                 ))}
               </div>
             </div>
@@ -446,10 +641,13 @@ export default function BudgetPage() {
               </button>
               <div className="tip-box">
                 <h4>Budget Tip</h4>
-                <p>
-                  You’re spending more on food than average travelers to Paris.
-                  Consider local markets for affordable meals!
-                </p>
+                <div className="tip-box">
+                  <ul>
+                    {insights.map((tip, i) => (
+                      <li key={i}>{tip}</li>
+                    ))}
+                  </ul>
+                </div>
               </div>
             </div>
           </aside>

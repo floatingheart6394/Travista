@@ -6,7 +6,7 @@ class TripPlannerRequest(BaseModel):
     duration: int = Field(..., ge=1)
     budget: float = Field(..., ge=0)
     travelers: int = Field(..., ge=1)
-    tripStyles: List[str]
+    trip_styles: List[str]
 
 
 class TripPlannerResponse(BaseModel):

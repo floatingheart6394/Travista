@@ -8,7 +8,7 @@ router = APIRouter(
 
 @router.post("/chat", response_model=AIChatResponse)
 async def chat_with_ai(payload: AIChatRequest):
-    # TEMP response (your AI teammate will replace logic)
+    # TEMP response (AI teammate will replace logic)
     reply = (
         "🤖 Tavi AI backend is ready!\n\n"
         f"You asked: '{payload.message}'\n\n"

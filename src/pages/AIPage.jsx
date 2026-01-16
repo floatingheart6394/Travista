@@ -95,7 +95,6 @@ export default function AIPage() {
   }
 };
 
-
   const quickAsk = (q) => {
     setInput(q);
   };
