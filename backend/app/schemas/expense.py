@@ -1,13 +1,14 @@
 from pydantic import BaseModel
-from datetime import date
+from datetime import datetime
 from typing import Optional
 
 class ExpenseCreate(BaseModel):
+    trip_id: int
     place: str
     amount: float
     category: str
-    date: date
-    source: str = "manual"
+    date: datetime            # ✅ MATCH frontend
+    source: Optional[str] = "manual"
 
 class ExpenseResponse(ExpenseCreate):
     id: int

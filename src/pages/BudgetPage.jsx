@@ -135,7 +135,7 @@ export default function BudgetPage() {
 
   async function addExpense(exp) {
     try {
-      await fetch(`${API_URL}/budget/expense/`, {
+      const res = await fetch(`${API_URL}/budget/expense`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -143,6 +143,12 @@ export default function BudgetPage() {
         },
         body: JSON.stringify(exp),
       });
+
+      if (!res.ok) {
+        const err = await res.json();
+        console.error("Add expense failed", err);
+        return;
+      }
 
       await fetchExpenses(activeTripId);
     } catch (err) {
@@ -489,15 +495,20 @@ export default function BudgetPage() {
               </select>
               <button
                 onClick={() => {
-                  addExpense({
+                  const payload = {
                     ...scanDraft,
                     trip_id: activeTripId,
-                  });
+                  };
+
+                  console.log("🚀 Expense payload being sent:", payload);
+
+                  addExpense(payload);
                   setScanDraft(null);
                 }}
               >
                 Confirm
               </button>
+
               <button className="outline" onClick={() => setScanDraft(null)}>
                 Cancel
               </button>

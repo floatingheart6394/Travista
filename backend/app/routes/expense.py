@@ -22,18 +22,22 @@ async def add_expense(
     await db.refresh(exp)
     return exp
 
-
 # 📄 Get all expenses
 @router.get("/expenses", response_model=list[ExpenseResponse])
 async def get_expenses(
+    trip_id: int,
     db: AsyncSession = Depends(get_db),
     user_id: int = Security(get_current_user_id),
 ):
     res = await db.execute(
-        select(Expense).where(Expense.user_id == user_id)
+        select(Expense)
+        .where(
+            Expense.user_id == user_id,
+            Expense.trip_id == trip_id
+        )
+        .order_by(Expense.date.desc())
     )
     return res.scalars().all()
-
 
 
 # 🗑️ Delete expense
