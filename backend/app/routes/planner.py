@@ -21,7 +21,6 @@ router = APIRouter(
 
 @router.post("/generate", response_model=TripPlannerResponse)
 async def generate_itinerary(payload: TripPlannerRequest):
-    print("🔥 Planner endpoint hit")
     # TEMP placeholder — AI teammate replaces this logic
     itinerary = f"""
     ✈️ AI Trip Plan for {payload.destination}

@@ -2728,3 +2728,12 @@ body {
   justify-content: flex-end;
   gap: 10px;
 }
+
+.loc-actions {
+  display: flex;
+  gap: 12px;
+}
+
+.emergency-map {
+  height: 65vh;
+}

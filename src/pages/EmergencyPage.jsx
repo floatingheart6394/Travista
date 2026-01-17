@@ -11,8 +11,6 @@ import {
   FiPlus,
   FiUser,
   FiDollarSign,
-  FiFlag,
-  FiHome,
 } from "react-icons/fi";
 import {
   FaAmbulance,
@@ -20,7 +18,7 @@ import {
   FaHospitalAlt,
   FaClinicMedical,
   FaCapsules,
-  FaLandmark,
+  FaFemale
 } from "react-icons/fa";
 import { useNavigate } from "react-router-dom";
 import {
@@ -28,6 +26,7 @@ import {
   addEmergencyContact,
   deleteEmergencyContact,
 } from "../services/emergencyContact";
+import EmergencyMap from "../components/EmergencyMap";
 
 export default function EmergencyPage() {
   const [view, setView] = useState("list");
@@ -66,9 +65,12 @@ export default function EmergencyPage() {
   const [activeCategory, setActiveCategory] = useState("all");
   const [showLocationModal, setShowLocationModal] = useState(false);
   const [isTrackingLocation, setIsTrackingLocation] = useState(false);
-  const [sortByDistance, setSortByDistance] = useState(true);
+  const [sortByDistance, setSortByDistance] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
   const [maxDistance, setMaxDistance] = useState(10); // km
+  const [showChangeLocation, setShowChangeLocation] = useState(false);
+  const [cityQuery, setCityQuery] = useState("");
+  const [cityResults, setCityResults] = useState([]);
 
   const CATEGORY_CONFIG = {
     all: {
@@ -78,6 +80,7 @@ export default function EmergencyPage() {
         '["amenity"="police"]',
         '["amenity"="pharmacy"]',
         '["amenity"="fire_station"]',
+        '["amenity"="atm"]',
       ],
       icon: <FiList />,
     },
@@ -100,6 +103,11 @@ export default function EmergencyPage() {
       label: "Fire Services",
       tags: ['["amenity"="fire_station"]'],
       icon: <FaFireExtinguisher />,
+    },
+    atm: {
+      label: "ATMs",
+      tags: ['["amenity"="atm"]'],
+      icon: <FiDollarSign />,
     },
   };
 
@@ -133,29 +141,6 @@ export default function EmergencyPage() {
   }
 
   useEffect(() => {
-    if (!navigator.geolocation) {
-      setLocationError("Geolocation not supported");
-      setShowLocationModal(true);
-      return;
-    }
-
-    navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        setUserLocation({
-          lat: pos.coords.latitude,
-          lon: pos.coords.longitude,
-        });
-        setIsTrackingLocation(true);
-        setShowLocationModal(false);
-      },
-      () => {
-        setIsTrackingLocation(false);
-        setShowLocationModal(true);
-      }
-    );
-  }, []);
-
-  useEffect(() => {
     if (!userLocation) return;
 
     async function loadPlaces() {
@@ -183,6 +168,7 @@ export default function EmergencyPage() {
     { key: "police", icon: <FiShield />, label: "Law Enforcement" },
     { key: "pharmacy", icon: <FaCapsules />, label: "Pharmacies" },
     { key: "fire", icon: <FaFireExtinguisher />, label: "Fire Services" },
+    { key: "atm", icon: <FiDollarSign />, label: "ATMs" },
   ];
 
   const filteredPlaces = places
@@ -206,7 +192,7 @@ export default function EmergencyPage() {
         )),
       };
     })
-    .filter(Boolean) 
+    .filter(Boolean)
     .filter((p) => p._distance <= maxDistance)
     .sort((a, b) => sortByDistance ? a._distance - b._distance : 0);
 
@@ -222,6 +208,19 @@ export default function EmergencyPage() {
       Math.sin(dLon / 2);
     return (R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))).toFixed(1);
   }
+  async function searchCity(query) {
+    if (!query) return;
+
+    const res = await fetch(
+      `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(
+        query
+      )}&limit=5`
+    );
+
+    const data = await res.json();
+    setCityResults(data);
+  }
+
   return (
     <div className="dashboard-page">
       <NewNavbar />
@@ -240,87 +239,107 @@ export default function EmergencyPage() {
                   </span>
                 </div>
                 <div className="loc-sub">
-                  {userLocation
+                  {isTrackingLocation
                     ? "Using your current location"
-                    : "Location access not enabled"}
+                    : userLocation
+                      ? "Using selected location"
+                      : "Location not set"}
                 </div>
+
               </div>
             </div>
             <div className="loc-actions">
-              {isTrackingLocation ? (
-                <button
-                  className="textlink"
-                  onClick={() => {
-                    setUserLocation(null);
-                    setIsTrackingLocation(false);
-                  }}
-                >
-                  Stop Location
-                </button>
-              ) : (
-                <button
-                  className="textlink"
-                  onClick={() => setShowLocationModal(true)}
-                >
-                  Enable Location
-                </button>
-              )}
+              <button
+                className="textlink"
+                onClick={() => setShowChangeLocation(true)}
+              >
+                Change Location
+              </button>
+
+              <button
+                className="textlink"
+                onClick={() => {
+                  navigator.geolocation.getCurrentPosition(
+                    (pos) => {
+                      setUserLocation({
+                        lat: pos.coords.latitude,
+                        lon: pos.coords.longitude,
+                      });
+                      setIsTrackingLocation(true);
+                    },
+                    console.error,
+                    {
+                      enableHighAccuracy: true,
+                      maximumAge: 0,
+                    }
+                  );
+                }}
+              >
+                Use Current Location
+              </button>
             </div>
           </section>
-
           {/* Hotlines */}
           <section className="emer-hotlines">
             <h2>Emergency Hotlines</h2>
             <div className="hotline-grid">
-              <div className="hot-card">
+              <div className="hot-card"
+                onClick={() => window.location.href = "tel:181"}
+                style={{ cursor: "pointer" }}>
                 <div className="hot-head">
                   <span className="hot-icon">
-                    <FiPhoneCall />
+                    <FaFemale />
                   </span>
-                  <span className="hot-call">
+                  <a className="hot-call" href="tel:181">
                     <FiPhoneCall />
-                  </span>
+                  </a>
                 </div>
-                <div className="hot-number">112</div>
-                <div className="hot-title">General Emergency</div>
-                <div className="hot-sub">All emergencies</div>
+                <div className="hot-number">181</div>
+                <div className="hot-title">Women Helpline</div>
+                <div className="hot-sub">Women safety & emergency</div>
               </div>
-              <div className="hot-card">
+              <div className="hot-card"
+                onClick={() => window.location.href = "tel:100"}
+                style={{ cursor: "pointer" }}>
                 <div className="hot-head">
                   <span className="hot-icon">
                     <FiShield />
                   </span>
-                  <span className="hot-call">
+                  <a className="hot-call" href="tel:100">
                     <FiPhoneCall />
-                  </span>
+                  </a>
                 </div>
-                <div className="hot-number">17</div>
+                <div className="hot-number">100</div>
                 <div className="hot-title">Police</div>
                 <div className="hot-sub">Law enforcement</div>
               </div>
-              <div className="hot-card">
+              <div className="hot-card"
+                onClick={() => window.location.href = "tel:108"}
+                style={{ cursor: "pointer" }}>
                 <div className="hot-head">
                   <span className="hot-icon">
                     <FaAmbulance />
                   </span>
-                  <span className="hot-call">
+                  <a className="hot-call" href="tel:108">
                     <FiPhoneCall />
-                  </span>
+                  </a>
                 </div>
-                <div className="hot-number">15</div>
+                <div className="hot-number">108</div>
                 <div className="hot-title">Medical Emergency</div>
-                <div className="hot-sub">SAMU ambulance</div>
+                <div className="hot-sub">Free ambulance</div>
               </div>
-              <div className="hot-card">
+              <div className="hot-card"
+                onClick={() => window.location.href = "tel:101"}
+                style={{ cursor: "pointer" }}>
                 <div className="hot-head">
                   <span className="hot-icon">
                     <FaFireExtinguisher />
                   </span>
-                  <span className="hot-call">
+                  <a className="hot-call" href="tel:101">
                     <FiPhoneCall />
-                  </span>
+                  </a>
                 </div>
-                <div className="hot-number">18</div>
+                <div className="hot-number">101</div>
                 <div className="hot-title">Fire Department</div>
                 <div className="hot-sub">Fire & rescue</div>
               </div>
@@ -508,6 +527,7 @@ export default function EmergencyPage() {
                     Nearby {CATEGORY_CONFIG[activeCategory].label}{" "}
                     <span className="muted">({filteredPlaces.length} results)</span>
                   </h3>
+                  {view === "list" && (
                   <div
                     className="sortby"
                     style={{ cursor: "pointer" }}
@@ -519,80 +539,90 @@ export default function EmergencyPage() {
                     </strong>{" "}
                     ▾
                   </div>
+                  )}
                 </div>
                 <div className="listings">
-                  {loadingPlaces && (
-                    <p>
-                      Loading nearby {CATEGORY_CONFIG[activeCategory].label.toLowerCase()}...
-                    </p>
+                  {view === "list" && (
+                    <>
+                      {loadingPlaces && (
+                        <p>
+                          Loading nearby {CATEGORY_CONFIG[activeCategory].label.toLowerCase()}...
+                        </p>
+                      )}
+
+                      {filteredPlaces.map((p) => {
+                        const name = p.tags?.name || "Unnamed Service";
+                        const address =
+                          p.tags?.["addr:full"] ||
+                          `${p.tags?.["addr:street"] || ""} ${p.tags?.["addr:city"] || ""}`;
+
+                        const lat = p.lat ?? p.center?.lat;
+                        const lon = p.lon ?? p.center?.lon;
+                        if (!lat || !lon) return null;
+
+                        const distance = userLocation
+                          ? getDistanceKm(
+                            userLocation.lat,
+                            userLocation.lon,
+                            lat,
+                            lon
+                          )
+                          : null;
+
+                        const amenity = p.tags?.amenity || "service";
+                        const phone = p.tags?.phone || p.tags?.["contact:phone"];
+
+                        return (
+                          <article key={p.id} className="place">
+                            <div className="pl-ico">
+                              <FaHospitalAlt />
+                            </div>
+
+                            <div className="pl-main">
+                              <h4>{name}</h4>
+                              <div className="pl-type">
+                                {amenity.charAt(0).toUpperCase() + amenity.slice(1)}
+                              </div>
+                              <div className="pl-meta">
+                                📍 {address || "Address not available"}
+                              </div>
+                            </div>
+
+                            <div className="pl-actions">
+                              {distance && <div className="distance">{distance} km away</div>}
+                              <div className="buttons">
+                                <a
+                                  className="primary"
+                                  href={`https://www.openstreetmap.org/?mlat=${lat}&mlon=${lon}#map=17/${lat}/${lon}`}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                >
+                                  Get Directions
+                                </a>
+                                {phone && (
+                                  <a href={`tel:${toTel(phone)}`} className="outline">
+                                    <FiPhoneCall /> Call
+                                  </a>
+                                )}
+                              </div>
+                            </div>
+                          </article>
+                        );
+                      })}
+                    </>
                   )}
-                  {filteredPlaces.map((p) => {
-                    const name = p.tags?.name || "Unnamed Service";
-                    const address =
-                      p.tags?.["addr:full"] ||
-                      `${p.tags?.["addr:street"] || ""} ${p.tags?.["addr:city"] || ""}`;
 
-                    const lat = p.lat ?? p.center?.lat;
-                    const lon = p.lon ?? p.center?.lon;
-
-                    // 🚨 VERY IMPORTANT SAFETY CHECK
-                    if (!lat || !lon) return null;
-
-                    const distance = userLocation
-                      ? getDistanceKm(
-                        userLocation.lat,
-                        userLocation.lon,
-                        lat,
-                        lon
-                      )
-                      : null;
-                    const amenity = p.tags?.amenity || "service";
-                    const phone = p.tags?.phone || p.tags?.["contact:phone"];
-
-                    return (
-                      <article key={p.id} className="place">
-                        <div className="pl-ico">
-                          <FaHospitalAlt />
-                        </div>
-
-                        <div className="pl-main">
-                          <h4>{name}</h4>
-
-                          {/* ✅ USE IT HERE */}
-                          <div className="pl-type">
-                            {amenity.charAt(0).toUpperCase() + amenity.slice(1)}
-                          </div>
-                          <div className="pl-meta">
-                            📍 {address || "Address not available"}
-                          </div>
-                        </div>
-
-                        <div className="pl-actions">
-                          {distance && <div className="distance">{distance} km away</div>}
-                          <div className="buttons">
-                            <a
-                              className="primary"
-                              href={`https://www.openstreetmap.org/?mlat=${lat}&mlon=${lon}#map=17/${lat}/${lon}`}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                            >
-                              Get Directions
-                            </a>
-                            {phone && (
-                              <a href={`tel:${toTel(phone)}`} className="outline">
-                                <FiPhoneCall /> Call
-                              </a>
-                            )}
-                          </div>
-                        </div>
-                      </article>
-                    );
-                  })}
+                  {view === "map" && (
+                    <EmergencyMap
+                      userLocation={userLocation}
+                      places={filteredPlaces}
+                    />
+                  )}
                 </div>
               </div>
 
               {/* Embassy card */}
-              <div className="embassy">
+              {/*<div className="embassy">
                 <div className="emb-ico">
                   <FaLandmark />
                 </div>
@@ -606,59 +636,11 @@ export default function EmergencyPage() {
                     <button className="emb-outline">Emergency Line</button>
                   </div>
                 </div>
-              </div>
+              </div>*/}
             </section>
           </div>
         </div>
       </main>
-      {showLocationModal && (
-        <div className="modal-backdrop">
-          <div className="modal">
-            <h3>Allow Location Access</h3>
-
-            <p>
-              We need your location to show nearby emergency services like hospitals,
-              police stations, pharmacies, and fire departments.
-            </p>
-
-            {locationError && (
-              <p className="error">{locationError}</p>
-            )}
-
-            <div className="modal-actions">
-              <button
-                className="outline"
-                onClick={() => setShowLocationModal(false)}
-              >
-                Continue without location
-              </button>
-
-              <button
-                className="primary"
-                onClick={() => {
-                  setShowLocationModal(false);
-                  navigator.geolocation.getCurrentPosition(
-                    (pos) => {
-                      setUserLocation({
-                        lat: pos.coords.latitude,
-                        lon: pos.coords.longitude,
-                      });
-                    },
-                    () => {
-                      setLocationError(
-                        "Location permission denied. Please enable it from browser settings."
-                      );
-                      setShowLocationModal(true);
-                    }
-                  );
-                }}
-              >
-                Enable Location
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
       {
         showFilters && (
           <div className="modal-backdrop">
@@ -689,6 +671,60 @@ export default function EmergencyPage() {
           </div>
         )
       }
+      {userLocation && (
+        <pre style={{ fontSize: 12 }}>
+          {JSON.stringify(userLocation, null, 2)}
+        </pre>
+      )}
+      {showChangeLocation && (
+        <div className="modal-backdrop">
+          <div className="modal">
+            <h3>Change Location</h3>
+
+            <input
+              type="text"
+              placeholder="Enter city or area (e.g., Coimbatore)"
+              value={cityQuery}
+              onChange={(e) => {
+                setCityQuery(e.target.value);
+                searchCity(e.target.value);
+              }}
+            />
+
+            <div className="city-results">
+              {cityResults.map((c) => (
+                <div
+                  key={c.place_id}
+                  className="city-item"
+                  onClick={() => {
+                    setUserLocation({
+                      lat: Number(c.lat),
+                      lon: Number(c.lon),
+                    });
+                    setIsTrackingLocation(false); // manual location
+                    setPlaces([]); // clear old data
+                    setShowChangeLocation(false);
+                    setCityResults([]);
+                    setCityQuery("");
+                  }}
+                  style={{ cursor: "pointer" }}
+                >
+                  {c.display_name}
+                </div>
+              ))}
+            </div>
+
+            <div className="modal-actions">
+              <button
+                className="outline"
+                onClick={() => setShowChangeLocation(false)}
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
