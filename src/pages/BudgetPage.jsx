@@ -44,12 +44,15 @@ export default function BudgetPage() {
   const [scanDraft, setScanDraft] = useState(null);
   const [people, setPeople] = useState(["Priya", "Riya", "Arjun"]);
   const [tripDestination, setTripDestination] = useState("");
+  const [showAllExpenses, setShowAllExpenses] = useState(false);
   const [manualExpense, setManualExpense] = useState({
     place: "",
     amount: "",
     category: "food",
     date: new Date().toISOString().slice(0, 10),
   });
+  const [deleteTarget, setDeleteTarget] = useState(null);
+  const [showValidationModal, setShowValidationModal] = useState(false);
 
   async function fetchExpenses(tripId) {
     if (!tripId) return;
@@ -119,8 +122,9 @@ export default function BudgetPage() {
     const diff = new Date(endDate).getTime() - Date.now();
     return Math.max(0, Math.ceil(diff / (24 * 60 * 60 * 1000)));
   }, [endDate]);
-
-
+  const recentExpenses = useMemo(() => {
+    return expenses.slice(0, 5);
+  }, [expenses]);
   const totalSpent = useMemo(
     () => expenses.reduce((s, e) => s + Number(e.amount || 0), 0),
     [expenses]
@@ -158,7 +162,7 @@ export default function BudgetPage() {
 
   async function submitManualExpense() {
     if (!manualExpense.place || !manualExpense.amount) {
-      alert("Please enter place and amount");
+      setShowValidationModal(true);
       return;
     }
 
@@ -182,8 +186,6 @@ export default function BudgetPage() {
 
 
   async function deleteExpense(id) {
-    if (!window.confirm("Delete this expense?")) return;
-
     try {
       await fetch(`${API_URL}/budget/expense/${id}`, {
         method: "DELETE",
@@ -193,12 +195,11 @@ export default function BudgetPage() {
       });
 
       await fetchExpenses(activeTripId);
+      setDeleteTarget(null);
     } catch (err) {
       console.error(err);
     }
   }
-
-
 
   // OCR stub: pulls amount from filename if present, allows edit before confirm
   function handleScanFile(file) {
@@ -253,67 +254,101 @@ export default function BudgetPage() {
     return entries;
   }, [expenses]);
 
-  const avgDaily = useMemo(() => {
-    const daysSoFar = Math.max(1, byDay.length);
-    return Math.round(totalSpent / daysSoFar);
-  }, [totalSpent, byDay]);
+  const elapsedDays = useMemo(() => {
+    if (!startDate) return 1;
+    return Math.max(
+      1,
+      Math.ceil((Date.now() - startDate) / 86400000)
+    );
+  }, [startDate]);
 
+  const avgDaily = Math.round(totalSpent / elapsedDays);
 
   const barData = useMemo(() => {
     const map = {};
 
     expenses.forEach((e) => {
-      const day = new Date(e.date).toLocaleDateString(undefined, {
-        weekday: "short",
-      });
+      const day = new Date(e.date).toDateString(); // ✅ full date
       map[day] = (map[day] || 0) + e.amount;
     });
 
+    const entries = Object.entries(map).sort(
+      (a, b) => new Date(a[0]) - new Date(b[0])
+    );
+
     return {
-      labels: Object.keys(map),
+      labels: entries.map(([d]) =>
+        new Date(d).toLocaleDateString(undefined, {
+          month: "short",
+          day: "numeric",
+        })
+      ),
       datasets: [
         {
           label: "Daily Spending",
-          data: Object.values(map),
+          data: entries.map(([, v]) => v),
           backgroundColor: "#14b8a6",
         },
       ],
     };
   }, [expenses]);
 
-
   const lineData = useMemo(() => {
-    const cumulative = [];
-    let sum = 0;
+    if (!startDate || !endDate) return null;
 
-    expenses
-      .sort((a, b) => new Date(a.date) - new Date(b.date))
-      .forEach((e) => {
-        sum += e.amount;
-        cumulative.push(sum);
-      });
+    const days = [];
+    const dailySpend = {};
+    let current = new Date(startDate);
+
+    // initialize days
+    while (current <= endDate) {
+      const key = current.toDateString();
+      dailySpend[key] = 0;
+      days.push(key);
+      current = new Date(current.getTime() + 86400000);
+    }
+
+    // aggregate expenses per day
+    expenses.forEach((e) => {
+      const key = new Date(e.date).toDateString();
+      if (dailySpend[key] !== undefined) {
+        dailySpend[key] += e.amount;
+      }
+    });
+
+    // cumulative spend
+    let running = 0;
+    const cumulativeActual = days.map((d) => {
+      running += dailySpend[d];
+      return running;
+    });
+
+    // ideal cumulative budget
+    const perDayBudget = tripBudget / days.length;
+    const cumulativeBudget = days.map((_, i) =>
+      Math.round(perDayBudget * (i + 1))
+    );
 
     return {
-      labels: cumulative.map((_, i) => `Day ${i + 1}`),
+      labels: days.map((_, i) => `Day ${i + 1}`),
       datasets: [
         {
           label: "Actual Spending",
-          data: cumulative,
+          data: cumulativeActual,
           borderColor: "#10b981",
-          backgroundColor: "#10b981",
           tension: 0.3,
         },
         {
-          label: "Budget",
-          data: cumulative.map(() => tripBudget),
+          label: "Ideal Budget",
+          data: cumulativeBudget,
           borderColor: "#3b82f6",
-          backgroundColor: "#3b82f6",
           borderDash: [5, 5],
           tension: 0.3,
         },
       ],
     };
-  }, [expenses, tripBudget]);
+  }, [expenses, tripBudget, startDate, endDate]);
+
 
   const insights = useMemo(() => {
     if (!expenses.length || tripBudget === 0) {
@@ -446,8 +481,8 @@ export default function BudgetPage() {
             </div>
           </div>
           <div className="metric-card">
-            <h4>Avg. Daily Spend</h4>
-            <div className="metric-amount purple">${avgDaily}</div>
+            <h4>Avg Daily Spend</h4>
+            <div className="metric-amount purple">${avgDaily.toLocaleString()}</div>
             <div className="metric-sub">Last {byDay.length} days</div>
           </div>
         </section>
@@ -602,10 +637,10 @@ export default function BudgetPage() {
             <div className="recent">
               <div className="recent-header">
                 <h3>Recent Expenses</h3>
-                <a>View All</a>
+                <a onClick={() => setShowAllExpenses(true)}>View All</a>
               </div>
               <div className="cards-list">
-                {expenses.map((e) => (
+                {recentExpenses.map((e) => (
                   <div key={e.id} className="expense-card">
                     <div className="expense-main">
                       <strong>{e.place}</strong>
@@ -623,7 +658,7 @@ export default function BudgetPage() {
 
                     <button
                       className="delete-btn"
-                      onClick={() => deleteExpense(e.id)}
+                      onClick={() => setDeleteTarget(e)}
                     >
                       🗑️
                     </button>
@@ -667,11 +702,112 @@ export default function BudgetPage() {
         {/* Budget vs Actual */}
         <section className="chart-card">
           <h3>Budget vs Actual Spending</h3>
-          <Line data={lineData} />
+          {lineData && <Line data={lineData} />}
         </section>
 
         {/* Optional sections kept minimal for now */}
       </main>
+      {showAllExpenses && (
+        <div className="modal-overlay">
+          <div className="modal">
+            <div className="modal-header">
+              <h3>All Expenses</h3>
+              <button onClick={() => setShowAllExpenses(false)}>✖</button>
+            </div>
+
+            <div className="modal-body scrollable">
+              {expenses.map((e) => (
+                <div key={e.id} className="expense-card">
+                  <div className="expense-main">
+                    <strong>{e.place}</strong>
+                    <span>${e.amount}</span>
+                  </div>
+                  <div className="expense-meta">
+                    <span>{categoryLabel(e.category)}</span>
+                    <span>
+                      {new Date(e.date).toLocaleDateString(undefined, {
+                        month: "short",
+                        day: "numeric",
+                      })}
+                    </span>
+                  </div>
+
+                  <button
+                    className="delete-btn"
+                    onClick={() => deleteExpense(e.id)}
+                  >
+                    🗑️
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+      {deleteTarget && (
+        <div className="modal-overlay">
+          <div className="modal">
+            <div className="modal-header">
+              <h3>Delete Expense</h3>
+              <button onClick={() => setDeleteTarget(null)}>✖</button>
+            </div>
+
+            <div className="modal-body">
+              <p>
+                Are you sure you want to delete this expense?
+              </p>
+
+              <div className="expense-preview">
+                <strong>{deleteTarget.place}</strong>
+                <span>₹{deleteTarget.amount}</span>
+              </div>
+            </div>
+
+            <div className="modal-actions">
+              <button
+                className="outline"
+                onClick={() => setDeleteTarget(null)}
+              >
+                Cancel
+              </button>
+
+              <button
+                className="danger"
+                onClick={() => deleteExpense(deleteTarget.id)}
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {showValidationModal && (
+        <div className="modal-overlay">
+          <div className="modal">
+            <div className="modal-header">
+              <h3>Missing Information</h3>
+              <button onClick={() => setShowValidationModal(false)}>✖</button>
+            </div>
+
+            <div className="modal-body">
+              <p>Please fill in the following fields before adding an expense:</p>
+              <ul className="custom-list">
+                {!manualExpense.place && <li>Place / Description</li>}
+                {!manualExpense.amount && <li>Amount</li>}
+              </ul>
+            </div>
+
+            <div className="modal-actions">
+              <button
+                className="primary"
+                onClick={() => setShowValidationModal(false)}
+              >
+                OK
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

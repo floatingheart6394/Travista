@@ -71,6 +71,10 @@ export default function EmergencyPage() {
   const [showChangeLocation, setShowChangeLocation] = useState(false);
   const [cityQuery, setCityQuery] = useState("");
   const [cityResults, setCityResults] = useState([]);
+  const [contactErrorModal, setContactErrorModal] = useState({
+    open: false,
+    message: "",
+  });
 
   const CATEGORY_CONFIG = {
     all: {
@@ -453,7 +457,10 @@ export default function EmergencyPage() {
                             disabled={saving}
                             onClick={async () => {
                               if (!form.name || !form.phone) {
-                                alert("Name and phone are required");
+                                setContactErrorModal({
+                                  open: true,
+                                  message: "Name and phone number are required to add an emergency contact.",
+                                });
                                 return;
                               }
 
@@ -464,7 +471,10 @@ export default function EmergencyPage() {
                                 setShowModal(false);
                                 setForm({ name: "", phone: "", relation: "" });
                               } catch (err) {
-                                alert(err.message || "Failed to add contact");
+                                setContactErrorModal({
+                                  open: true,
+                                  message: err.message || "Failed to add contact. Please try again.",
+                                });
                               } finally {
                                 setSaving(false);
                               }
@@ -528,17 +538,17 @@ export default function EmergencyPage() {
                     <span className="muted">({filteredPlaces.length} results)</span>
                   </h3>
                   {view === "list" && (
-                  <div
-                    className="sortby"
-                    style={{ cursor: "pointer" }}
-                    onClick={() => setSortByDistance((prev) => !prev)}
-                  >
-                    Sort by{" "}
-                    <strong>
-                      {sortByDistance ? "Distance" : "Default"}
-                    </strong>{" "}
-                    ▾
-                  </div>
+                    <div
+                      className="sortby"
+                      style={{ cursor: "pointer" }}
+                      onClick={() => setSortByDistance((prev) => !prev)}
+                    >
+                      Sort by{" "}
+                      <strong>
+                        {sortByDistance ? "Distance" : "Default"}
+                      </strong>{" "}
+                      ▾
+                    </div>
                   )}
                 </div>
                 <div className="listings">
@@ -720,6 +730,37 @@ export default function EmergencyPage() {
                 onClick={() => setShowChangeLocation(false)}
               >
                 Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {contactErrorModal.open && (
+        <div className="modal-backdrop">
+          <div className="modal">
+            <div className="modal-header">
+              <h3>Unable to Proceed</h3>
+              <button
+                onClick={() =>
+                  setContactErrorModal({ open: false, message: "" })
+                }
+              >
+                ✖
+              </button>
+            </div>
+
+            <div className="modal-body">
+              <p>{contactErrorModal.message}</p>
+            </div>
+
+            <div className="modal-actions">
+              <button
+                className="primary"
+                onClick={() =>
+                  setContactErrorModal({ open: false, message: "" })
+                }
+              >
+                OK
               </button>
             </div>
           </div>
