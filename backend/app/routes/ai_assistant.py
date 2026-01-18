@@ -11,3 +11,4 @@ router = APIRouter(
 async def chat_with_ai(payload: AIChatRequest):
     reply = ask_openai(payload.message)
     return {"reply": reply}
+
