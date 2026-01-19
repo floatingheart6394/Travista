@@ -1,0 +1,83 @@
+{
+  "info": {
+    "title": "Travista RAG Bot - API Examples",
+    "description": "Example requests for the RAG-Enhanced Chat API"
+  },
+  "endpoints": {
+    "ai_chat": {
+      "path": "POST /ai/chat",
+      "description": "Generic chat without RAG context",
+      "request_example": {
+        "message": "What is Travista?"
+      },
+      "response_example": {
+        "reply": "Travista is a travel planning application that helps users organize trips, manage budgets, and get travel advice."
+      }
+    },
+    "rag_chat": {
+      "path": "POST /ai/rag-chat",
+      "description": "RAG-enhanced chat with context from travel documents",
+      "request_example": {
+        "question": "What are the cheapest ways to travel in Europe?"
+      },
+      "response_example": {
+        "question": "What are the cheapest ways to travel in Europe?",
+        "answer": "Based on travel guides, here are the cheapest ways to travel in Europe:\n\n1. **Buses** - FlixBus is the dominant provider offering very affordable long-distance travel. Expect to pay between $5-30 for most routes.\n\n2. **Trains** - While more expensive than buses, trains are still affordable, especially if you book in advance or purchase a Eurail Pass for multiple countries.\n\n3. **Budget Airlines** - Ryanair, easyJet, and Wizz Air offer cheap flights if booked early.\n\n4. **Public Transportation** - Within cities, metro systems are affordable. Get a city pass for unlimited travel.\n\n5. **Overnight Buses/Trains** - These save on accommodation costs while traveling.",
+        "context": "Buses: Cheapest land transportation option. FlixBus dominates Europe (very comfortable and affordable)... [truncated for brevity]",
+        "source": "RAG-Enhanced"
+      }
+    }
+  },
+  "example_questions": {
+    "budget_travel": [
+      "What are the best budget airlines in Europe?",
+      "How can I travel cheaply in Southeast Asia?",
+      "What are some money-saving travel tips?",
+      "Which destinations are most affordable?"
+    ],
+    "accommodation": [
+      "What is the difference between hostels and Airbnb?",
+      "How do I find cheap hotels?",
+      "What are hidden costs when booking hotels?",
+      "Are hostels safe for solo travelers?"
+    ],
+    "destinations": [
+      "What are the best travel destinations in Asia?",
+      "Tell me about visiting Paris",
+      "What's a good destination for first-time travelers?",
+      "Where should I go for a beach vacation?"
+    ],
+    "transportation": [
+      "What's the best way to get around Europe?",
+      "How do I book trains in Japan?",
+      "What are pros and cons of renting a car?",
+      "How can I save money on flights?"
+    ]
+  },
+  "curl_examples": {
+    "generic_chat": "curl -X POST 'http://localhost:8000/ai/chat' \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"message\": \"Hello Tavi!\"}'",
+    "rag_chat": "curl -X POST 'http://localhost:8000/ai/rag-chat' \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"question\": \"What are budget travel tips?\"}'",
+    "python_requests": "import requests\n\nresponse = requests.post(\n    'http://localhost:8000/ai/rag-chat',\n    json={'question': 'Best budget accommodations?'}\n)\n\nprint(response.json()['answer'])"
+  },
+  "expected_latency": {
+    "ai_chat": "~2-5 seconds (LLM response only)",
+    "rag_chat": "~2-6 seconds (retrieve + generate)",
+    "retrieval": "~10-50ms (similarity search)",
+    "embedding": "~50-100ms per document"
+  },
+  "cost_estimates": {
+    "per_request": "$0.002 - $0.005 (using gpt-4o-mini)",
+    "per_1000_requests": "$2 - $5",
+    "note": "Actual cost depends on response length and model choice"
+  },
+  "best_practices": [
+    "Ask specific, clear questions for better answers",
+    "Questions about travel topics yield better results (due to training data)",
+    "Use context from previous responses in follow-up questions",
+    "Report inaccurate answers to improve the knowledge base",
+    "Keep questions focused on a single topic",
+    "Avoid asking about real-time data (flights, weather) - add that later"
+  ],
+  "swagger_docs": "Visit http://localhost:8000/docs for interactive API testing",
+  "health_check": "GET http://localhost:8000/ → {\"status\": \"Backend running\"}"
+}

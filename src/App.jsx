@@ -42,7 +42,7 @@ function AppInner() {
         <Route path="/signup" element={<SignupPage />} />
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/budget" element={<BudgetPage />} />
-        <Route path="/dashboard" element={<ExplorePage />} />
+        <Route path="/explore" element={<ExplorePage />} />
         <Route path="/planner" element={<PlannerPage />} />
         <Route path="/todo" element={<TodoPage />} />
         <Route path="/ai" element={<AIPage />} />

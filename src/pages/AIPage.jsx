@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import NewNavbar from "../components/NewNavbar";
 import {
   FiMic,
@@ -7,9 +7,12 @@ import {
   FiDollarSign,
   FiCoffee,
   FiCalendar,
+  FiUpload,
+  FiImage,
 } from "react-icons/fi";
 import { useLocation } from "react-router-dom";
 import { FaRegStar } from "react-icons/fa";
+import { chatWithRAG, ocrExtractText, ocrChatWithRAG } from "../services/ragService";
 
 export default function AIPage() {
   const [messages, setMessages] = useState([
@@ -17,7 +20,7 @@ export default function AIPage() {
       id: 1,
       role: "ai",
       author: "Tavi AI",
-      text: "Hi! I'm Tavi, your AI travel assistant! 🌍 How can I help you plan your perfect trip today?",
+      text: "Hi! I'm Tavi, your AI travel assistant! 🌍 How can I help you plan your perfect trip today? You can also upload travel documents for OCR analysis!",
       time: new Date().toLocaleTimeString([], {
         hour: "2-digit",
         minute: "2-digit",
@@ -25,6 +28,9 @@ export default function AIPage() {
     },
   ]);
   const [input, setInput] = useState("");
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [ocrPreview, setOcrPreview] = useState(null);
+  const fileInputRef = useRef(null);
   const location = useLocation();
 
   useEffect(() => {
@@ -51,33 +57,29 @@ export default function AIPage() {
   // 1️⃣ Add user message immediately
   setMessages((prev) => [...prev, userMsg]);
   setInput("");
+  setIsProcessing(true);
 
   try {
     // 2️⃣ Call backend
-    const res = await fetch("http://127.0.0.1:8000/ai/chat", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ message: trimmed }),
-    });
+      const ragResult = await chatWithRAG(trimmed);
 
-    const data = await res.json();
-
-    // 3️⃣ Add AI reply
-    const aiMsg = {
-      id: Date.now() + 1,
-      role: "ai",
-      author: "Tavi AI",
-      text: data.reply,
-      time: new Date().toLocaleTimeString([], {
-        hour: "2-digit",
-        minute: "2-digit",
-      }),
-    };
+      // Add AI reply with sources
+      const aiMsg = {
+        id: Date.now() + 1,
+        role: "ai",
+        author: "Tavi AI",
+        text: ragResult.answer,
+        context: ragResult.context,
+        source: ragResult.source,
+        time: new Date().toLocaleTimeString([], {
+          hour: "2-digit",
+          minute: "2-digit",
+        }),
+      };
 
     setMessages((prev) => [...prev, aiMsg]);
   } catch (error) {
+    console.error("Error:", error);
     // 4️⃣ Error handling
     setMessages((prev) => [
       ...prev,
@@ -85,15 +87,95 @@ export default function AIPage() {
         id: Date.now() + 2,
         role: "ai",
         author: "Tavi AI",
-        text: "⚠️ Sorry, I couldn’t connect to the server.",
+        text: "⚠️ Sorry, I couldn't connect to the server. Make sure the backend is running: cd backend && uvicorn app.main:app --reload",
         time: new Date().toLocaleTimeString([], {
           hour: "2-digit",
           minute: "2-digit",
         }),
       },
     ]);
+  } finally {
+    setIsProcessing(false);
   }
 };
+
+  const handleImageUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsProcessing(true);
+    
+    try {
+      // Step 1: Extract text from image
+      const ocrResult = await ocrExtractText(file);
+      
+      if (ocrResult.status !== "success") {
+        throw new Error(ocrResult.error || "OCR failed");
+      }
+
+      // Show OCR preview
+      const preview = {
+        fileName: file.name,
+        text: ocrResult.text,
+        confidence: ocrResult.confidence,
+        confidenceLevel: ocrResult.confidenceLevel,
+      };
+      setOcrPreview(preview);
+
+      // Add user message showing uploaded file
+      const userMsg = {
+        id: Date.now(),
+        role: "user",
+        author: "You",
+        text: `📄 Uploaded: ${file.name} (OCR Confidence: ${ocrResult.confidence.toFixed(1)}%)`,
+        time: new Date().toLocaleTimeString([], {
+          hour: "2-digit",
+          minute: "2-digit",
+        }),
+      };
+      setMessages((prev) => [...prev, userMsg]);
+
+      // Step 2: Process extracted text through RAG
+      const ragResult = await ocrChatWithRAG(ocrResult.text);
+
+      if (ragResult.status === "success") {
+        const aiMsg = {
+          id: Date.now() + 1,
+          role: "ai",
+          author: "Tavi AI",
+          text: ragResult.answer,
+          context: ragResult.context,
+          source: "OCR+RAG",
+          extractedText: ocrResult.text,
+          time: new Date().toLocaleTimeString([], {
+            hour: "2-digit",
+            minute: "2-digit",
+          }),
+        };
+        setMessages((prev) => [...prev, aiMsg]);
+      }
+    } catch (error) {
+      console.error("OCR error:", error);
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: Date.now() + 2,
+          role: "ai",
+          author: "Tavi AI",
+          text: `⚠️ OCR processing failed: ${error.message}. Make sure Tesseract-OCR is installed.`,
+          time: new Date().toLocaleTimeString([], {
+            hour: "2-digit",
+            minute: "2-digit",
+          }),
+        },
+      ]);
+    } finally {
+      setIsProcessing(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
+    }
+  };
 
   const quickAsk = (q) => {
     setInput(q);
@@ -135,24 +217,94 @@ export default function AIPage() {
                   )}
                   <div className="msg-bubble">
                     <p>{m.text}</p>
+                    {m.extractedText && (
+                      <details style={{ marginTop: "8px", fontSize: "0.9em" }}>
+                        <summary>📄 Extracted Text</summary>
+                        <pre style={{
+                          backgroundColor: "#f5f5f5",
+                          padding: "8px",
+                          borderRadius: "4px",
+                          maxHeight: "200px",
+                          overflow: "auto",
+                          marginTop: "8px",
+                          fontSize: "0.85em"
+                        }}>
+                          {m.extractedText}
+                        </pre>
+                      </details>
+                    )}
                   </div>
                   <footer className="msg-time">{m.time}</footer>
                 </article>
               ))}
             </div>
 
+            {ocrPreview && (
+              <div style={{
+                backgroundColor: "#f9f9f9",
+                border: "1px solid #ddd",
+                borderRadius: "8px",
+                padding: "12px",
+                margin: "12px 0",
+                fontSize: "0.9em"
+              }}>
+                <strong>📸 OCR Preview</strong>
+                <p><strong>File:</strong> {ocrPreview.fileName}</p>
+                <p><strong>Confidence:</strong> {ocrPreview.confidence.toFixed(1)}% ({ocrPreview.confidenceLevel})</p>
+                <p><strong>Characters:</strong> {ocrPreview.text.length} | <strong>Words:</strong> {ocrPreview.text.split(/\s+/).length}</p>
+                <details>
+                  <summary>View Extracted Text</summary>
+                  <pre style={{
+                    backgroundColor: "#fff",
+                    padding: "8px",
+                    borderRadius: "4px",
+                    maxHeight: "300px",
+                    overflow: "auto",
+                    marginTop: "8px",
+                    fontSize: "0.85em"
+                  }}>
+                    {ocrPreview.text}
+                  </pre>
+                </details>
+                <button 
+                  onClick={() => setOcrPreview(null)}
+                  style={{ marginTop: "8px", padding: "4px 8px", fontSize: "0.9em" }}
+                >
+                  Clear Preview
+                </button>
+              </div>
+            )}
+
             <div className="ai-input">
-              <button className="icon left" aria-label="Voice">
-                <FiMic />
+              <button 
+                className="icon left" 
+                aria-label="Upload Image"
+                onClick={() => fileInputRef.current?.click()}
+                title="Upload travel document for OCR analysis"
+              >
+                <FiUpload />
               </button>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                onChange={handleImageUpload}
+                style={{ display: "none" }}
+              />
               <input
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && sendMessage()}
-                placeholder="Vegan restaurants nearby"
+                onKeyDown={(e) => e.key === "Enter" && !isProcessing && sendMessage()}
+                placeholder="Ask about travel or upload a document..."
+                disabled={isProcessing}
               />
-              <button className="send" onClick={sendMessage} aria-label="Send">
-                <FiSend />
+              <button 
+                className="send" 
+                onClick={sendMessage} 
+                aria-label="Send"
+                disabled={isProcessing}
+              >
+                {isProcessing ? "..." : <FiSend />}
               </button>
             </div>
           </section>
