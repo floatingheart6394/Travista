@@ -1,5 +1,7 @@
+from fastapi import APIRouter
 from pydantic import BaseModel, Field
 from typing import List
+from app.schemas.planner import TripPlannerRequest, TripPlannerResponse
 
 class TripPlannerRequest(BaseModel):
     destination: str = Field(..., min_length=1)
@@ -11,8 +13,6 @@ class TripPlannerRequest(BaseModel):
 
 class TripPlannerResponse(BaseModel):
     itinerary: str
-from fastapi import APIRouter
-from app.schemas.planner import TripPlannerRequest, TripPlannerResponse
 
 router = APIRouter(
     prefix="/planner",

@@ -10,8 +10,6 @@ class Trip(Base):
     __table_args__ = {"schema": "trip"}
 
     id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(Integer, nullable=False) 
-    # ✅ FIX HERE
     user_id = Column(
         Integer,
         ForeignKey("auth.users.id"),

@@ -85,6 +85,8 @@ export default function PlannerPage() {
 
     try {
       setLoading(true);
+      
+      // First, save the trip
       await fetch(`${API_URL}/trip/`, {
         method: "POST",
         headers: {
@@ -93,24 +95,36 @@ export default function PlannerPage() {
         },
         body: JSON.stringify(payload),
       });
-      const res = await fetch(`${API_URL}/planner/generate`, {
+
+      // Then, generate itinerary using OpenAI
+      const prompt = `You are an expert travel planner. Create a detailed ${payload.duration}-day itinerary for ${payload.travelers} traveler(s) visiting ${payload.destination}. 
+Budget: $${payload.budget} total
+Travel Styles: ${payload.trip_styles.join(", ") || "General sightseeing"}
+
+Provide a day-by-day itinerary with:
+- Estimated costs for activities and meals
+- Recommended restaurants and attractions
+- Local tips and transportation advice
+- Time management
+- Budget breakdown
+
+Format it clearly with each day as a section.`;
+
+      const res = await fetch(`${API_URL}/ai/chat`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${localStorage.getItem("access_token")}`,
         },
-        body: JSON.stringify(payload),
+        body: JSON.stringify({ message: prompt }),
       });
 
       if (!res.ok) {
-        const errText = await res.text();
-        console.error("Backend error:", errText);
-        throw new Error(errText);
+        throw new Error("Failed to generate itinerary");
       }
 
-
       const data = await res.json();
-      setItinerary(data.itinerary);
+      setItinerary(data.reply);
     } catch (err) {
       console.error(err);
       setError("⚠️ Unable to generate itinerary. Please try again.");

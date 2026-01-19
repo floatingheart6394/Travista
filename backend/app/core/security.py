@@ -1,5 +1,6 @@
 from passlib.context import CryptContext
 
+# Use pbkdf2_sha256 (SAFE on Windows + Python 3.13)
 pwd_context = CryptContext(
     schemes=["pbkdf2_sha256"],
     deprecated="auto"
@@ -8,5 +9,5 @@ pwd_context = CryptContext(
 def hash_password(password: str) -> str:
     return pwd_context.hash(password)
 
-def verify_password(plain_password: str, hashed_password: str) -> bool:
-    return pwd_context.verify(plain_password, hashed_password)
+def verify_password(password: str, hashed_password: str) -> bool:
+    return pwd_context.verify(password, hashed_password)

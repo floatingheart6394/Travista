@@ -1,5 +1,11 @@
+from dotenv import load_dotenv
+load_dotenv()
+
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from app.rag.pipeline import initialize_rag
+
 
 from app.database import engine, Base
 from app.routes import auth, users, todo, emergency_contact, ai_assistant, planner, expense, trip
@@ -18,6 +24,7 @@ app.add_middleware(
 async def startup():
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
+    initialize_rag("app/rag/data")
 
 app.include_router(auth.router)
 app.include_router(users.router)
