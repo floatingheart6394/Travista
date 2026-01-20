@@ -9,7 +9,9 @@ from PIL import Image  # type: ignore
 import io
 import re
 from typing import Dict, List, Tuple
-
+pytesseract.pytesseract.tesseract_cmd = (
+    r"C:\Users\reshm\AppData\Local\Programs\Tesseract-OCR\tesseract.exe"
+)
 
 def preprocess_image(image: Image.Image) -> Image.Image:
     """

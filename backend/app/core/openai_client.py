@@ -10,7 +10,7 @@ def ask_openai(prompt: str) -> str:
             {"role": "system", "content": "You are Tavi, an intelligent travel assistant."},
             {"role": "user", "content": prompt}
         ],
-        max_tokens=400,
+        max_tokens=2000,
         temperature=0.7
     )
 

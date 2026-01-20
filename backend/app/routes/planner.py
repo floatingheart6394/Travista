@@ -26,7 +26,7 @@ async def generate_itinerary(payload: TripPlannerRequest):
     ✈️ AI Trip Plan for {payload.destination}
 
     Duration: {payload.duration} days
-    Budget: ${payload.budget}
+    Budget: ₹{payload.budget}
     Travelers: {payload.travelers}
     Style: {", ".join(payload.trip_styles) or "General"}
 

@@ -16,7 +16,9 @@ async def add_expense(
     db: AsyncSession = Depends(get_db),
     current_user: int = Security(get_current_user_id),
 ):
-    exp = Expense(**payload.dict(), user_id=current_user)
+    # Extract only the fields that Expense model accepts
+    payload_dict = payload.dict(exclude={"ocr_confidence"})
+    exp = Expense(**payload_dict, user_id=current_user)
     db.add(exp)
     await db.commit()
     await db.refresh(exp)
@@ -41,7 +43,7 @@ async def get_expenses(
 
 
 # 🗑️ Delete expense
-@router.delete("/expense/{expense_id}")
+@router.delete("/expenses/{expense_id}")
 async def delete_expense(
     expense_id: int,
     db: AsyncSession = Depends(get_db),

@@ -30,12 +30,12 @@ ChartJS.register(
 
 const API_URL = import.meta.env.VITE_API_BASE_URL;
 const CATEGORIES = [
-  { key: "food", label: "Food & Dining", emoji: "🍽️", color: "#FF6B6B" },
-  { key: "stay", label: "Accommodation", emoji: "🏨", color: "#4ECDC4" },
-  { key: "transport", label: "Transport", emoji: "🚗", color: "#45B7D1" },
-  { key: "shopping", label: "Shopping", emoji: "🛍️", color: "#F7DC6F" },
-  { key: "activities", label: "Activities", emoji: "🎉", color: "#BB8FCE" },
-  { key: "misc", label: "Miscellaneous", emoji: "📦", color: "#85C1E2" },
+  { key: "food", label: "Food & Dining", emoji: "🍽️", color: "#E60000" },
+  { key: "stay", label: "Accommodation", emoji: "🏨", color: "#0099CC" },
+  { key: "transport", label: "Transport", emoji: "🚗", color: "#0066CC" },
+  { key: "shopping", label: "Shopping", emoji: "🛍️", color: "#009999" },
+  { key: "activities", label: "Activities", emoji: "🎉", color: "#CC00CC" },
+  { key: "misc", label: "Miscellaneous", emoji: "📦", color: "#00AA44" },
 ];
 
 export default function BudgetPage() {
@@ -86,8 +86,19 @@ export default function BudgetPage() {
       setActiveTripId(trip.id);
       setTripBudget(trip.budget ?? 0);
       setTripDestination(trip.destination ?? "");
-      const start = new Date();
-      const end = new Date(Date.now() + (trip.duration || 1) * 24 * 60 * 60 * 1000);
+      
+      // Use explicit start_date and end_date from trip if available
+      let start, end;
+      if (trip.start_date && trip.end_date) {
+        start = new Date(trip.start_date + "T00:00:00Z");
+        end = new Date(trip.end_date + "T00:00:00Z");
+      } else {
+        // Fallback to calculating from duration
+        const startDate = new Date();
+        const startDateKey = startDate.toISOString().split("T")[0];
+        start = new Date(startDateKey + "T00:00:00Z");
+        end = new Date(Date.now() + ((trip.duration || 1) - 1) * 24 * 60 * 60 * 1000);
+      }
       setStartDate(start);
       setEndDate(end);
       await fetchExpenses(trip.id);
@@ -164,7 +175,7 @@ export default function BudgetPage() {
 
     // Extract amount
     const text = ocrResult.text || "";
-    const amountMatch = text.match(/\$?\s?(\d+[.,]\d{2})/);
+    const amountMatch = text.match(/[₹$]?\s?(\d+[.,]\d{2})/);
     const amount = amountMatch ? parseFloat(amountMatch[1].replace(/,/, "")) : "";
 
     // Detect category
@@ -285,7 +296,10 @@ export default function BudgetPage() {
   }, [expenses]);
 
   const doughnutData = {
-    labels: CATEGORIES.map((c) => c.label),
+    labels: CATEGORIES.map((c) => {
+      const amount = expensesByCategory[c.key];
+      return `${c.label}: ₹${amount.toFixed(2)}`;
+    }),
     datasets: [
       {
         data: CATEGORIES.map((c) => expensesByCategory[c.key]),
@@ -294,6 +308,175 @@ export default function BudgetPage() {
         borderWidth: 2,
       },
     ],
+  };
+
+  const doughnutOptions = {
+    responsive: true,
+    maintainAspectRatio: true,
+    plugins: {
+      legend: {
+        position: "right",
+        labels: {
+          padding: 15,
+          font: {
+            size: 12,
+          },
+          generateLabels: function(chart) {
+            const data = chart.data;
+            return data.labels.map((label, i) => ({
+              text: label,
+              fillStyle: data.datasets[0].backgroundColor[i],
+              hidden: false,
+              index: i,
+            }));
+          },
+        },
+        maxWidth: 150,
+      },
+    },
+  };
+
+  // Daily spending data for line chart
+  const dailySpendingData = useMemo(() => {
+    if (!startDate || !endDate) return null;
+
+    // Normalize startDate to ensure consistent calculation
+    const normalizedStartDate = new Date(startDate);
+    normalizedStartDate.setHours(0, 0, 0, 0);
+
+    // Group expenses by day
+    const dailyMap = {};
+    expenses.forEach((exp) => {
+      const expenseDate = new Date(exp.date);
+      expenseDate.setHours(0, 0, 0, 0);
+      const dayNum = Math.floor((expenseDate - normalizedStartDate) / (1000 * 60 * 60 * 24)) + 1;
+      const dateKey = expenseDate.toISOString().split("T")[0];
+      if (dayNum > 0) {
+        dailyMap[dateKey] = (dailyMap[dateKey] || 0) + parseFloat(exp.amount);
+      }
+    });
+
+    // Generate array of all days from start date to end date
+    const days = [];
+    const currentDate = new Date(normalizedStartDate);
+    const tripEndDate = new Date(endDate);
+    tripEndDate.setHours(0, 0, 0, 0);
+
+    let dayCount = 0;
+    while (currentDate <= tripEndDate) {
+      dayCount++;
+      const dateKey = currentDate.toISOString().split("T")[0];
+      days.push({
+        date: dateKey,
+        amount: dailyMap[dateKey] || 0,
+        dayNum: dayCount,
+      });
+      currentDate.setDate(currentDate.getDate() + 1);
+    }
+
+    // Calculate daily budget (budget / trip duration)
+    const tripDuration = Math.max(1, days.length);
+    const dailyBudget = tripBudget / tripDuration;
+
+    return { days, dailyBudget };
+  }, [expenses, startDate, endDate, tripBudget]);
+
+  const lineChartData = useMemo(() => {
+    if (!dailySpendingData) return null;
+
+    const { days, dailyBudget } = dailySpendingData;
+
+    return {
+      labels: days.map((d) => `Day ${d.dayNum}`),
+      datasets: [
+        {
+          label: "Amount Spent",
+          data: days.map((d) => d.amount),
+          borderColor: "#667eea",
+          backgroundColor: "rgba(102, 126, 234, 0.1)",
+          borderWidth: 3,
+          fill: true,
+          pointRadius: 4,
+          pointBackgroundColor: "#667eea",
+          pointBorderColor: "#fff",
+          pointBorderWidth: 2,
+          tension: 0.4,
+        },
+        {
+          label: "Daily Budget",
+          data: days.map(() => dailyBudget),
+          borderColor: "#FF6B6B",
+          backgroundColor: "transparent",
+          borderWidth: 2,
+          borderDash: [5, 5],
+          fill: false,
+          pointRadius: 0,
+          tension: 0,
+        },
+      ],
+    };
+  }, [dailySpendingData]);
+
+  const lineChartOptions = {
+    responsive: true,
+    maintainAspectRatio: true,
+    plugins: {
+      legend: {
+        position: "top",
+        labels: {
+          padding: 15,
+          font: {
+            size: 13,
+            weight: 600,
+          },
+          usePointStyle: true,
+        },
+      },
+      tooltip: {
+        backgroundColor: "rgba(0, 0, 0, 0.8)",
+        padding: 12,
+        titleFont: { size: 14, weight: 600 },
+        bodyFont: { size: 13 },
+        cornerRadius: 8,
+        displayColors: true,
+        callbacks: {
+          label: function (context) {
+            let label = context.dataset.label || "";
+            if (label) {
+              label += ": ";
+            }
+            label += "₹" + context.parsed.y.toFixed(2);
+            return label;
+          },
+        },
+      },
+    },
+    scales: {
+      y: {
+        beginAtZero: true,
+        ticks: {
+          callback: function (value) {
+            return "₹" + value.toFixed(0);
+          },
+          font: {
+            size: 12,
+          },
+        },
+        grid: {
+          color: "rgba(0, 0, 0, 0.05)",
+        },
+      },
+      x: {
+        ticks: {
+          font: {
+            size: 12,
+          },
+        },
+        grid: {
+          display: false,
+        },
+      },
+    },
   };
 
   // Render main UI
@@ -313,12 +496,12 @@ export default function BudgetPage() {
         <section className="metric-cards">
           <div className="metric-card metric--brand">
             <h4>Total Budget</h4>
-            <div className="metric-amount">${tripBudget.toLocaleString()}</div>
+            <div className="metric-amount">₹{tripBudget.toFixed(2)}</div>
             <div className="metric-sub">{tripDestination ? `${tripDestination} Getaway` : "Your Trip"}</div>
           </div>
           <div className="metric-card">
             <h4>Amount Spent</h4>
-            <div className="metric-amount red">${totalSpent.toFixed(2)}</div>
+            <div className="metric-amount red">₹{totalSpent.toFixed(2)}</div>
             <div className="metric-sub">{budgetPct}% of budget</div>
           </div>
           <div className="metric-card">
@@ -328,8 +511,8 @@ export default function BudgetPage() {
           </div>
           <div className="metric-card">
             <h4>Remaining Budget</h4>
-            <div className="metric-amount">${(tripBudget - totalSpent).toFixed(2)}</div>
-            <div className="metric-sub">${(daysLeft > 0 ? ((tripBudget - totalSpent) / daysLeft).toFixed(2) : 0)}/day</div>
+            <div className="metric-amount">₹{(tripBudget - totalSpent).toFixed(2)}</div>
+            <div className="metric-sub">₹{(daysLeft > 0 ? ((tripBudget - totalSpent) / daysLeft).toFixed(2) : 0)}/day</div>
           </div>
         </section>
 
@@ -382,6 +565,10 @@ export default function BudgetPage() {
               ) : (
                 expenses.map((e) => {
                   const cat = CATEGORIES.find((c) => c.key === e.category);
+                  // Calculate day number consistently with dailySpendingData
+                  const expenseDate = new Date(e.date);
+                  expenseDate.setHours(0, 0, 0, 0);
+                  const dayNum = Math.floor((expenseDate - startDate) / (1000 * 60 * 60 * 24)) + 1;
                   return (
                     <div key={e.id} className="expense-item">
                       <div className="expense-info">
@@ -389,10 +576,13 @@ export default function BudgetPage() {
                         <div>
                           <strong>{e.place}</strong>
                           <br />
-                          <span className="category-badge">{cat?.label}</span>
+                          <div className="badge-container">
+                            <span className="category-badge">{cat?.label}</span>
+                            <span className="day-badge">Day {dayNum}</span>
+                          </div>
                         </div>
                       </div>
-                      <div className="expense-amount">${parseFloat(e.amount).toFixed(2)}</div>
+                      <div className="expense-amount">₹{parseFloat(e.amount).toFixed(2)}</div>
                       <button className="btn-delete" onClick={() => deleteExpense(e.id)}>
                         Delete
                       </button>
@@ -493,11 +683,20 @@ export default function BudgetPage() {
         {/* Charts Tab */}
         {activeTab === "charts" && (
           <section className="charts-section">
-            <h3>📊 Spending by Category</h3>
-            <div className="chart-container">
+            <h3>📊 Spending Analytics</h3>
+            <div className="charts-grid">
               <div className="chart-wrapper">
+                <h4>Spending by Category</h4>
                 {expenses.length > 0 ? (
-                  <Doughnut data={doughnutData} options={{ responsive: true, maintainAspectRatio: true }} />
+                  <Doughnut data={doughnutData} options={doughnutOptions} />
+                ) : (
+                  <p className="no-chart-data">No expense data to display yet</p>
+                )}
+              </div>
+              <div className="chart-wrapper">
+                <h4>Daily Spending vs Budget</h4>
+                {expenses.length > 0 && lineChartData ? (
+                  <Line data={lineChartData} options={lineChartOptions} />
                 ) : (
                   <p className="no-chart-data">No expense data to display yet</p>
                 )}
