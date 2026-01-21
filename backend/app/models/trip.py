@@ -1,4 +1,4 @@
-from sqlalchemy import Column, String, Integer, Numeric, ForeignKey
+from sqlalchemy import Column, String, Integer, Numeric, ForeignKey, Date
 from sqlalchemy.dialects.postgresql import ARRAY
 from sqlalchemy.sql import func
 from sqlalchemy.types import DateTime
@@ -22,5 +22,7 @@ class Trip(Base):
 
     budget = Column(Numeric(10, 2))
     trip_styles = Column(ARRAY(String), default=[])
+    start_date = Column(Date, nullable=True)
+    end_date = Column(Date, nullable=True)
 
     created_at = Column(DateTime(timezone=True), server_default=func.now())

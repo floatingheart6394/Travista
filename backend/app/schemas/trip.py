@@ -1,5 +1,6 @@
 from pydantic import BaseModel
-from typing import List
+from typing import List, Optional
+from datetime import date
 
 class TripCreate(BaseModel):
     destination: str
@@ -7,6 +8,8 @@ class TripCreate(BaseModel):
     travelers: int
     budget: float
     trip_styles: List[str] = []
+    start_date: Optional[date] = None
+    end_date: Optional[date] = None
 
 class TripResponse(TripCreate):
     id: int

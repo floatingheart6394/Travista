@@ -97,10 +97,34 @@ export default function BudgetPage() {
         const startDate = new Date();
         const startDateKey = startDate.toISOString().split("T")[0];
         start = new Date(startDateKey + "T00:00:00Z");
-        end = new Date(Date.now() + ((trip.duration || 1) - 1) * 24 * 60 * 60 * 1000);
+        end = new Date(start.getTime() + ((trip.duration || 1) - 1) * 24 * 60 * 60 * 1000);
       }
       setStartDate(start);
       setEndDate(end);
+
+      // #region agent log
+      fetch("http://127.0.0.1:7242/ingest/f67b22ff-b9f1-49eb-90ce-af684507f178", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          sessionId: "debug-session",
+          runId: "pre-fix",
+          hypothesisId: "H1",
+          location: "BudgetPage.jsx:loadBudgetData",
+          message: "Loaded active trip and computed start/end dates",
+          data: {
+            tripId: trip.id,
+            apiStartDate: trip.start_date || null,
+            apiEndDate: trip.end_date || null,
+            duration: trip.duration,
+            computedStart: start.toISOString(),
+            computedEnd: end.toISOString(),
+          },
+          timestamp: Date.now(),
+        }),
+      }).catch(() => {});
+      // #endregion
+
       await fetchExpenses(trip.id);
     } catch (err) {
       console.error("Failed to load budget data:", err);
@@ -117,10 +141,37 @@ export default function BudgetPage() {
       });
       if (!res.ok) return;
       const data = await res.json();
-      setExpenses(data.map((e) => ({ ...e, date: new Date(e.date) })));
+      // Keep `date` as a date-only string from API when possible to avoid timezone shifts.
+      setExpenses(
+        data.map((e) => ({
+          ...e,
+          date: typeof e.date === "string" ? e.date : new Date(e.date).toISOString().slice(0, 10),
+        }))
+      );
     } catch (err) {
       console.error("Failed to fetch expenses:", err);
     }
+  }
+
+  function toUtcMidnightMs(value) {
+    if (!value) return null;
+    if (typeof value === "string") {
+      const s = value.slice(0, 10); // YYYY-MM-DD
+      const [y, m, d] = s.split("-").map((n) => parseInt(n, 10));
+      if (!y || !m || !d) return null;
+      return Date.UTC(y, m - 1, d);
+    }
+    if (value instanceof Date) {
+      return Date.UTC(value.getUTCFullYear(), value.getUTCMonth(), value.getUTCDate());
+    }
+    return null;
+  }
+
+  function computeTripDayNumber(expenseDate, tripStartDate) {
+    const expMs = toUtcMidnightMs(expenseDate);
+    const startMs = toUtcMidnightMs(tripStartDate);
+    if (expMs == null || startMs == null) return null;
+    return Math.floor((expMs - startMs) / (1000 * 60 * 60 * 24)) + 1;
   }
 
   // Receipt Scanning Handler
@@ -215,6 +266,30 @@ export default function BudgetPage() {
     }
 
     try {
+      // #region agent log
+      fetch("http://127.0.0.1:7242/ingest/f67b22ff-b9f1-49eb-90ce-af684507f178", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          sessionId: "debug-session",
+          runId: "amount-issue",
+          hypothesisId: "A1",
+          location: "BudgetPage.jsx:addExpense",
+          message: "Submitting expense payload",
+          data: {
+            place: manualExpense.place,
+            rawAmount: manualExpense.amount,
+            parsedAmount: parseFloat(manualExpense.amount),
+            category: manualExpense.category,
+            date: manualExpense.date,
+            tripId: activeTripId,
+            source: manualExpense.source || "manual",
+          },
+          timestamp: Date.now(),
+        }),
+      }).catch(() => {});
+      // #endregion
+
       const result = await addExpenseAPI({
         place: manualExpense.place,
         amount: parseFloat(manualExpense.amount),
@@ -228,6 +303,26 @@ export default function BudgetPage() {
         setShowValidationModal(true);
         return;
       }
+
+      // #region agent log
+      fetch("http://127.0.0.1:7242/ingest/f67b22ff-b9f1-49eb-90ce-af684507f178", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          sessionId: "debug-session",
+          runId: "amount-issue",
+          hypothesisId: "A2",
+          location: "BudgetPage.jsx:addExpense",
+          message: "Expense API response",
+          data: {
+            responseStatus: result.status,
+            responseAmount: result.data?.amount,
+            responseId: result.data?.id,
+          },
+          timestamp: Date.now(),
+        }),
+      }).catch(() => {});
+      // #endregion
 
       setShowReceiptModal(false);
       setManualExpense({
@@ -282,9 +377,49 @@ export default function BudgetPage() {
   );
 
   const daysLeft = useMemo(() => {
-    if (!endDate) return 0;
-    return Math.max(0, Math.ceil((endDate - new Date()) / (1000 * 60 * 60 * 24)));
-  }, [endDate]);
+    if (!startDate || !endDate) return 0;
+    const nowMs = toUtcMidnightMs(new Date());
+    const endMs = toUtcMidnightMs(endDate);
+    const startMs = toUtcMidnightMs(startDate);
+    if (nowMs == null || endMs == null || startMs == null) return 0;
+    const dayMs = 1000 * 60 * 60 * 24;
+    const totalDuration = Math.floor((endMs - startMs) / dayMs) + 1;
+
+    let computed = 0;
+    if (nowMs < startMs) {
+      // Before trip starts: show full duration (what the user expects)
+      computed = Math.max(totalDuration, 0);
+    } else if (nowMs <= endMs) {
+      // During trip: inclusive countdown
+      computed = Math.floor((endMs - nowMs) / dayMs) + 1;
+    } else {
+      computed = 0;
+    }
+
+    // #region agent log
+    fetch("http://127.0.0.1:7242/ingest/f67b22ff-b9f1-49eb-90ce-af684507f178", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        sessionId: "debug-session",
+        runId: "days-left",
+        hypothesisId: "D1",
+        location: "BudgetPage.jsx:daysLeft",
+        message: "Computed days left",
+        data: {
+          startDate: new Date(startMs).toISOString(),
+          endDate: new Date(endMs).toISOString(),
+          today: new Date(nowMs).toISOString(),
+          totalDuration,
+          computed,
+        },
+        timestamp: Date.now(),
+      }),
+    }).catch(() => {});
+    // #endregion
+
+    return computed;
+  }, [startDate, endDate]);
 
   const expensesByCategory = useMemo(() => {
     const breakdown = {};
@@ -340,17 +475,15 @@ export default function BudgetPage() {
   const dailySpendingData = useMemo(() => {
     if (!startDate || !endDate) return null;
 
-    // Normalize startDate to ensure consistent calculation
-    const normalizedStartDate = new Date(startDate);
-    normalizedStartDate.setHours(0, 0, 0, 0);
+    const normalizedStartDateMs = toUtcMidnightMs(startDate);
+    const tripEndDateMs = toUtcMidnightMs(endDate);
+    if (normalizedStartDateMs == null || tripEndDateMs == null) return null;
 
     // Group expenses by day
     const dailyMap = {};
     expenses.forEach((exp) => {
-      const expenseDate = new Date(exp.date);
-      expenseDate.setHours(0, 0, 0, 0);
-      const dayNum = Math.floor((expenseDate - normalizedStartDate) / (1000 * 60 * 60 * 24)) + 1;
-      const dateKey = expenseDate.toISOString().split("T")[0];
+      const dayNum = computeTripDayNumber(exp.date, startDate);
+      const dateKey = typeof exp.date === "string" ? exp.date.slice(0, 10) : new Date(exp.date).toISOString().slice(0, 10);
       if (dayNum > 0) {
         dailyMap[dateKey] = (dailyMap[dateKey] || 0) + parseFloat(exp.amount);
       }
@@ -358,25 +491,43 @@ export default function BudgetPage() {
 
     // Generate array of all days from start date to end date
     const days = [];
-    const currentDate = new Date(normalizedStartDate);
-    const tripEndDate = new Date(endDate);
-    tripEndDate.setHours(0, 0, 0, 0);
+    const dayMs = 1000 * 60 * 60 * 24;
 
     let dayCount = 0;
-    while (currentDate <= tripEndDate) {
+    for (let currentMs = normalizedStartDateMs; currentMs <= tripEndDateMs; currentMs += dayMs) {
       dayCount++;
-      const dateKey = currentDate.toISOString().split("T")[0];
+      const dateKey = new Date(currentMs).toISOString().split("T")[0];
       days.push({
         date: dateKey,
         amount: dailyMap[dateKey] || 0,
         dayNum: dayCount,
       });
-      currentDate.setDate(currentDate.getDate() + 1);
     }
 
     // Calculate daily budget (budget / trip duration)
     const tripDuration = Math.max(1, days.length);
     const dailyBudget = tripBudget / tripDuration;
+
+    // #region agent log
+    fetch("http://127.0.0.1:7242/ingest/f67b22ff-b9f1-49eb-90ce-af684507f178", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        sessionId: "debug-session",
+        runId: "pre-fix",
+        hypothesisId: "H2",
+        location: "BudgetPage.jsx:dailySpendingData",
+        message: "Computed daily spending data",
+        data: {
+          startDate: new Date(normalizedStartDateMs).toISOString(),
+          endDate: new Date(tripEndDateMs).toISOString(),
+          tripDuration: tripDuration,
+          expenseCount: expenses.length,
+        },
+        timestamp: Date.now(),
+      }),
+    }).catch(() => {});
+    // #endregion
 
     return { days, dailyBudget };
   }, [expenses, startDate, endDate, tripBudget]);
@@ -563,12 +714,36 @@ export default function BudgetPage() {
               {expenses.length === 0 ? (
                 <p className="empty-message">No expenses yet. Start by scanning a receipt or adding manually!</p>
               ) : (
-                expenses.map((e) => {
+                expenses.map((e, index) => {
                   const cat = CATEGORIES.find((c) => c.key === e.category);
                   // Calculate day number consistently with dailySpendingData
-                  const expenseDate = new Date(e.date);
-                  expenseDate.setHours(0, 0, 0, 0);
-                  const dayNum = Math.floor((expenseDate - startDate) / (1000 * 60 * 60 * 24)) + 1;
+                  const dayNum = computeTripDayNumber(e.date, startDate);
+                  const expenseDate = typeof e.date === "string" ? new Date(e.date + "T00:00:00Z") : new Date(e.date);
+
+                  // #region agent log
+                  if (index < 5 && startDate) {
+                    fetch("http://127.0.0.1:7242/ingest/f67b22ff-b9f1-49eb-90ce-af684507f178", {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({
+                        sessionId: "debug-session",
+                        runId: "pre-fix",
+                        hypothesisId: "H3",
+                        location: "BudgetPage.jsx:expenseList",
+                        message: "Computed day number for expense",
+                        data: {
+                          expenseId: e.id,
+                          expenseDate: expenseDate.toISOString(),
+                          startDate: startDate.toISOString(),
+                          rawDate: e.date,
+                          dayNum: dayNum,
+                        },
+                        timestamp: Date.now(),
+                      }),
+                    }).catch(() => {});
+                  }
+                  // #endregion
+
                   return (
                     <div key={e.id} className="expense-item">
                       <div className="expense-info">

@@ -1,5 +1,5 @@
 from pydantic import BaseModel
-from datetime import datetime
+from datetime import date
 from typing import Optional
 
 class ExpenseCreate(BaseModel):
@@ -7,7 +7,7 @@ class ExpenseCreate(BaseModel):
     place: str
     amount: float
     category: str
-    date: datetime            # ✅ MATCH frontend
+    date: date               # ✅ date-only; avoids timezone shifts in day calculations
     source: Optional[str] = "manual"
     ocr_confidence: Optional[float] = None  # Confidence score from OCR (0-100)
 

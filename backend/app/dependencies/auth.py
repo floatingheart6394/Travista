@@ -8,6 +8,13 @@ security = HTTPBearer(auto_error=False)
 def get_current_user_id(
     credentials: HTTPAuthorizationCredentials = Depends(security)
 ) -> int:
+    # Gracefully handle missing credentials to return user-friendly 401 instead of 500
+    if credentials is None or credentials.credentials is None:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Please sign in to continue.",
+        )
+
     token = credentials.credentials
 
     try:
@@ -15,12 +22,15 @@ def get_current_user_id(
         user_id = payload.get("sub")
 
         if user_id is None:
-            raise HTTPException(status_code=401)
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Please sign in to continue.",
+            )
 
         return int(payload["sub"]) 
 
     except (JWTError, ValueError):
         raise HTTPException(
-            status_code=401,
-            detail="Invalid or expired token"
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Session expired. Please sign in again.",
         )

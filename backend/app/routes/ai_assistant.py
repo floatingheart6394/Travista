@@ -1,4 +1,4 @@
-from fastapi import APIRouter, UploadFile, File
+from fastapi import APIRouter, UploadFile, File, Security, Depends
 from app.schemas.ai_assistant import (
     AIChatRequest, AIChatResponse, AIRAGRequest, AIRAGResponse,
     OCRResponse, OCRWithRAGRequest, OCRWithRAGResponse, TravelDocumentAnalysis,
@@ -7,6 +7,7 @@ from app.schemas.ai_assistant import (
 from app.core.openai_client import ask_openai
 from app.rag.pipeline import rag_pipeline
 from app.ocr.ocr_service import extract_text_from_image, extract_travel_info, ocr_with_rag, extract_receipt_data
+from app.dependencies.auth import get_current_user_id
 
 router = APIRouter(
     prefix="/ai",
@@ -14,14 +15,20 @@ router = APIRouter(
 )
 
 @router.post("/chat", response_model=AIChatResponse)
-async def chat_with_ai(payload: AIChatRequest):
+async def chat_with_ai(
+    payload: AIChatRequest,
+    user_id: int = Security(get_current_user_id)
+):
     """Generic chat endpoint without RAG context."""
     reply = ask_openai(payload.message)
     return {"reply": reply}
 
 
 @router.post("/rag-chat", response_model=AIRAGResponse)
-async def chat_with_rag(payload: AIRAGRequest):
+async def chat_with_rag(
+    payload: AIRAGRequest,
+    user_id: int = Security(get_current_user_id)
+):
     """Chat endpoint with RAG context retrieval."""
     result = rag_pipeline(payload.question)
     return {
@@ -33,7 +40,10 @@ async def chat_with_rag(payload: AIRAGRequest):
 
 
 @router.post("/ocr", response_model=OCRResponse)
-async def extract_text_ocr(file: UploadFile = File(...)):
+async def extract_text_ocr(
+    file: UploadFile = File(...),
+    user_id: int = Security(get_current_user_id)
+):
     """
     Extract text from uploaded image using OCR.
     Supports: JPG, PNG, BMP, TIFF
@@ -82,7 +92,10 @@ async def extract_text_ocr(file: UploadFile = File(...)):
 
 
 @router.post("/ocr-with-rag", response_model=OCRWithRAGResponse)
-async def ocr_chat_with_rag(payload: OCRWithRAGRequest):
+async def ocr_chat_with_rag(
+    payload: OCRWithRAGRequest,
+    user_id: int = Security(get_current_user_id)
+):
     """
     Process OCR-extracted text through RAG pipeline.
     Takes text from OCR output and provides AI responses with travel context.
@@ -109,7 +122,10 @@ async def ocr_chat_with_rag(payload: OCRWithRAGRequest):
 
 
 @router.post("/analyze-travel-document")
-async def analyze_travel_document(file: UploadFile = File(...)) -> dict:
+async def analyze_travel_document(
+    file: UploadFile = File(...),
+    user_id: int = Security(get_current_user_id)
+) -> dict:
     """
     Analyze uploaded travel document image.
     Extracts text and identifies travel-related information (dates, prices, keywords).
@@ -149,7 +165,10 @@ async def analyze_travel_document(file: UploadFile = File(...)) -> dict:
 
 
 @router.post("/scan-receipt", response_model=ReceiptScanResponse)
-async def scan_receipt(file: UploadFile = File(...)):
+async def scan_receipt(
+    file: UploadFile = File(...),
+    user_id: int = Security(get_current_user_id)
+):
     """
     Scan receipt/ticket image and extract expense data.
     Automatically detects:

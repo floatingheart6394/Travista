@@ -9,6 +9,7 @@ from app.rag.pipeline import initialize_rag
 
 from app.database import engine, Base
 from app.routes import auth, users, todo, emergency_contact, ai_assistant, planner, expense, trip
+from sqlalchemy import text
 
 app = FastAPI(title="Travista Backend")
 
@@ -24,6 +25,9 @@ app.add_middleware(
 async def startup():
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
+        # Lightweight schema patching for dev: ensure trip dates exist even if tables already created
+        await conn.execute(text("ALTER TABLE IF EXISTS trip.trips ADD COLUMN IF NOT EXISTS start_date DATE"))
+        await conn.execute(text("ALTER TABLE IF EXISTS trip.trips ADD COLUMN IF NOT EXISTS end_date DATE"))
     initialize_rag("app/rag/data")
 
 app.include_router(auth.router)
