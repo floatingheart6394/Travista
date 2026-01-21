@@ -20,8 +20,16 @@ async def chat_with_ai(
     user_id: int = Security(get_current_user_id)
 ):
     """Generic chat endpoint without RAG context."""
-    reply = ask_openai(payload.message)
-    return {"reply": reply}
+    try:
+        reply = ask_openai(payload.message)
+        return {"reply": reply}
+    except Exception as e:
+        from fastapi import HTTPException
+        # Return user-friendly error message
+        raise HTTPException(
+            status_code=500,
+            detail="I'm having trouble responding right now. Please try again."
+        )
 
 
 @router.post("/rag-chat", response_model=AIRAGResponse)
@@ -30,13 +38,21 @@ async def chat_with_rag(
     user_id: int = Security(get_current_user_id)
 ):
     """Chat endpoint with RAG context retrieval."""
-    result = rag_pipeline(payload.question)
-    return {
-        "question": result["question"],
-        "answer": result["answer"],
-        "context": result["context_used"],
-        "source": "RAG-Enhanced"
-    }
+    try:
+        result = rag_pipeline(payload.question)
+        return {
+            "question": result["question"],
+            "answer": result["answer"],
+            "context": result["context_used"],
+            "source": "RAG-Enhanced"
+        }
+    except Exception as e:
+        from fastapi import HTTPException
+        # Return user-friendly error message instead of technical details
+        raise HTTPException(
+            status_code=500,
+            detail="I'm having trouble answering your question right now. Please try again in a moment."
+        )
 
 
 @router.post("/ocr", response_model=OCRResponse)
@@ -139,7 +155,7 @@ async def analyze_travel_document(
         if ocr_result.get("status") == "error":
             return {
                 "status": "error",
-                "error": ocr_result.get("error")
+                "error": "Unable to extract text from the image. Please try a clearer image."
             }
         
         # Analyze travel-related content
@@ -158,10 +174,11 @@ async def analyze_travel_document(
         }
     
     except Exception as e:
-        return {
-            "status": "error",
-            "error": str(e)
-        }
+        from fastapi import HTTPException
+        raise HTTPException(
+            status_code=500,
+            detail="Unable to analyze the image. Please try another file."
+        )
 
 
 @router.post("/scan-receipt", response_model=ReceiptScanResponse)
@@ -193,7 +210,7 @@ async def scan_receipt(
                 "category": "shopping",
                 "category_confidence": 0,
                 "category_scores": {},
-                "error": "File size exceeds 10MB limit"
+                "error": "File size is too large. Please choose a smaller image (max 10MB)."
             }
         
         # Extract text from image
@@ -209,7 +226,7 @@ async def scan_receipt(
                 "category": "shopping",
                 "category_confidence": 0,
                 "category_scores": {},
-                "error": ocr_result.get("error")
+                "error": "Could not read the receipt image. Please try a clearer image."
             }
         
         extracted_text = ocr_result.get("text", "")
@@ -230,14 +247,8 @@ async def scan_receipt(
         }
     
     except Exception as e:
-        return {
-            "status": "error",
-            "extracted_text": "",
-            "vendor": "",
-            "amount": None,
-            "amount_confidence": 0,
-            "category": "shopping",
-            "category_confidence": 0,
-            "category_scores": {},
-            "error": f"Receipt scan failed: {str(e)}"
-        }
+        from fastapi import HTTPException
+        raise HTTPException(
+            status_code=500,
+            detail="Unable to process the receipt. Please try another image."
+        )

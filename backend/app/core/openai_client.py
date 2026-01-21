@@ -11,15 +11,14 @@ def ask_openai(prompt: str) -> str:
                 "role": "system",
                 "content": (
                     "You are Tavi, an intelligent travel assistant for the Travista app. "
-                    "Always provide concise, on-task answers about: trip planning, budget/expenses, itinerary guidance, "
-                    "popular spots, emergency contacts/spots, and how to use app features. "
-                    "If asked about a user's generated itinerary, answer helpfully and suggest adjustments. "
-                    "If data is missing, say what you need clearly. Keep answers brief and actionable."
+                    "Provide concise, helpful answers in 2-4 sentences maximum. "
+                    "Cover: trip planning, destinations, budgets, expenses, itineraries, app features, and travel advice. "
+                    "Be conversational, friendly, and actionable. Avoid lengthy explanations."
                 )
             },
             {"role": "user", "content": prompt}
         ],
-        max_tokens=2000,
+        max_tokens=300,
         temperature=0.7
     )
 

@@ -166,22 +166,40 @@ def extract_travel_info(text: str) -> Dict:
 
 def ocr_with_rag(text: str, rag_pipeline) -> Dict:
     """
-    Process OCR-extracted text through RAG pipeline for context-aware responses.
+    Analyze OCR-extracted text and provide intelligent insights.
+    Detects document type and provides relevant information.
     """
     try:
-        result = rag_pipeline(text)
+        from app.core.openai_client import ask_openai
+        
+        # Create a contextual prompt for analyzing the document
+        analysis_prompt = f"""
+You are Tavi, an AI assistant analyzing an uploaded document.
+
+Based on the text below, provide a brief 2-3 sentence summary of what this document is and any relevant insights.
+If it's a receipt/ticket, mention the key details. If it's travel info, highlight important points.
+Be concise and helpful.
+
+Document Text:
+{text[:500]}
+
+Your analysis:
+"""
+        
+        answer = ask_openai(analysis_prompt)
+        
         return {
             "status": "success",
-            "question": text,
-            "answer": result["answer"],
-            "context": result["context_used"],
-            "source": "OCR+RAG"
+            "question": "Document Analysis",
+            "answer": answer,
+            "context": text[:300],  # Show snippet of extracted text
+            "source": "OCR+AI Analysis"
         }
     except Exception as e:
         return {
             "status": "error",
             "error": str(e),
-            "question": text
+            "question": "Document Analysis"
         }
 
 

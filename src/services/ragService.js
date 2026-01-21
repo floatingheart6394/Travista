@@ -1,17 +1,36 @@
 const API_URL = "http://localhost:8000";
 
+const getAuthHeaders = () => ({
+  "Content-Type": "application/json",
+  Authorization: `Bearer ${localStorage.getItem("access_token")}`,
+});
+
+const handleApiError = async (response) => {
+  const errorData = await response.json().catch(() => ({}));
+  const detail = errorData.detail || "Something went wrong";
+  
+  // Return user-friendly error messages
+  if (response.status === 401) {
+    throw new Error("Please sign in to continue.");
+  } else if (response.status === 403) {
+    throw new Error("You don't have permission to perform this action.");
+  } else if (response.status === 500) {
+    throw new Error("Our servers are experiencing issues. Please try again later.");
+  }
+  
+  throw new Error(detail);
+};
+
 export const chatWithRAG = async (question) => {
   try {
     const response = await fetch(`${API_URL}/ai/rag-chat`, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
+      headers: getAuthHeaders(),
       body: JSON.stringify({ question }),
     });
 
     if (!response.ok) {
-      throw new Error(`API error: ${response.status}`);
+      await handleApiError(response);
     }
 
     const data = await response.json();
@@ -30,14 +49,12 @@ export const chatWithoutRAG = async (message) => {
   try {
     const response = await fetch(`${API_URL}/ai/chat`, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
+      headers: getAuthHeaders(),
       body: JSON.stringify({ message }),
     });
 
     if (!response.ok) {
-      throw new Error(`API error: ${response.status}`);
+      await handleApiError(response);
     }
 
     const data = await response.json();
@@ -59,11 +76,14 @@ export const ocrExtractText = async (imageFile) => {
 
     const response = await fetch(`${API_URL}/ai/ocr`, {
       method: "POST",
+      headers: {
+        Authorization: `Bearer ${localStorage.getItem("access_token")}`,
+      },
       body: formData,
     });
 
     if (!response.ok) {
-      throw new Error(`OCR API error: ${response.status}`);
+      await handleApiError(response);
     }
 
     const data = await response.json();
@@ -91,14 +111,12 @@ export const ocrChatWithRAG = async (ocrText) => {
   try {
     const response = await fetch(`${API_URL}/ai/ocr-with-rag`, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
+      headers: getAuthHeaders(),
       body: JSON.stringify({ ocr_text: ocrText }),
     });
 
     if (!response.ok) {
-      throw new Error(`OCR+RAG API error: ${response.status}`);
+      await handleApiError(response);
     }
 
     const data = await response.json();
@@ -128,11 +146,14 @@ export const analyzeTravelDocument = async (imageFile) => {
 
     const response = await fetch(`${API_URL}/ai/analyze-travel-document`, {
       method: "POST",
+      headers: {
+        Authorization: `Bearer ${localStorage.getItem("access_token")}`,
+      },
       body: formData,
     });
 
     if (!response.ok) {
-      throw new Error(`Travel analysis API error: ${response.status}`);
+      await handleApiError(response);
     }
 
     const data = await response.json();

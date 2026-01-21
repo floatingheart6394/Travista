@@ -81,13 +81,14 @@ export default function AIPage() {
   } catch (error) {
     console.error("Error:", error);
     // 4️⃣ Error handling
+    const errorMessage = error.message || "Something went wrong. Please try again.";
     setMessages((prev) => [
       ...prev,
       {
         id: Date.now() + 2,
         role: "ai",
         author: "Tavi AI",
-        text: "⚠️ Sorry, I couldn't connect to the server. Make sure the backend is running: cd backend && uvicorn app.main:app --reload",
+        text: `⚠️ ${errorMessage}`,
         time: new Date().toLocaleTimeString([], {
           hour: "2-digit",
           minute: "2-digit",
