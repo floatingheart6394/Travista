@@ -42,7 +42,7 @@ function initBattle() {
   emby.position.y = canvas.height * 0.55  // 55% from top (lower position)
   
   renderedSprites = [draggle, emby]
-  queue = []
+  queue = [] 
 
   emby.attacks.forEach((attack) => {
     const button = document.createElement('button')

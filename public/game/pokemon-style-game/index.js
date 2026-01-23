@@ -4,7 +4,7 @@ const c = canvas.getContext('2d')
 canvas.width = window.innerWidth
 canvas.height = window.innerHeight
 
-// Resize canvas on window resize
+// Resize canvas on window resize 
 window.addEventListener('resize', () => {
   canvas.width = window.innerWidth
   canvas.height = window.innerHeight
@@ -278,7 +278,7 @@ function animate() {
           rectangle2: battleZone
         }) &&
         overlappingArea > (player.width * player.height) / 2 &&
-        Math.random() < 0.5
+        Math.random() < 0.25
       ) {
         // deactivate current animation loop
         window.cancelAnimationFrame(animationId)
