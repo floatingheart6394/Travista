@@ -2,42 +2,33 @@ import NewNavbar from "../components/NewNavbar";
 
 export default function GamePage() {
   const containerStyle = {
+    margin: "0",
+    padding: "0",
+    width: "100vw",
+    height: "100vh",
+    overflow: "hidden",
+    backgroundColor: "#000",
     display: "flex",
     flexDirection: "column",
-    alignItems: "center",
-    justifyContent: "center",
-    minHeight: "100vh",
-    backgroundColor: "#1a1a1a",
-    padding: "20px",
-  };
-
-  const headingStyle = {
-    color: "#fff",
-    fontSize: "32px",
-    fontWeight: "bold",
-    marginBottom: "30px",
   };
 
   const iframeStyle = {
-    width: "1024px",
-    height: "576px",
+    width: "100%",
+    height: "100%",
     border: "none",
-    borderRadius: "8px",
-    boxShadow: "0 4px 6px rgba(0, 0, 0, 0.3)",
+    display: "block",
+    flex: "1",
   };
 
   return (
-    <div className="dashboard-page">
+    <div style={containerStyle}>
       <NewNavbar />
-      <main style={containerStyle}>
-        <h1 style={headingStyle}>Pixel Adventure Game</h1>
-        <iframe
-          src="/game/pokemon-style-game/index.html"
-          style={iframeStyle}
-          title="Pixel Adventure Game"
-          allowFullScreen
-        />
-      </main>
+      <iframe
+        src="/game/pokemon-style-game/index.html"
+        style={iframeStyle}
+        title="Pixel Adventure Game"
+        allowFullScreen
+      />
     </div>
   );
 }
