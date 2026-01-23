@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import NewNavbar from "../components/NewNavbar";
 import {
   FiMapPin,
@@ -10,11 +10,7 @@ import {
   FiList,
   FiPlus,
   FiUser,
-  FiMessageCircle,
   FiDollarSign,
-  FiFlag,
-  FiHome,
-  FiPlusCircle,
 } from "react-icons/fi";
 import {
   FaAmbulance,
@@ -22,49 +18,212 @@ import {
   FaHospitalAlt,
   FaClinicMedical,
   FaCapsules,
-  FaLandmark,
+  FaFemale
 } from "react-icons/fa";
 import { useNavigate } from "react-router-dom";
+import {
+  fetchEmergencyContacts,
+  addEmergencyContact,
+  deleteEmergencyContact,
+} from "../services/emergencyContact";
+import EmergencyMap from "../components/EmergencyMap";
 
 export default function EmergencyPage() {
   const [view, setView] = useState("list");
+  const [contacts, setContacts] = useState([]);
+  const [loadingContacts, setLoadingContacts] = useState(true);
+  const [error, setError] = useState(null);
+  useEffect(() => {
+    async function loadContacts() {
+      try {
+        const data = await fetchEmergencyContacts();
+        setContacts(data);
+      } catch (err) {
+        setError(err.message);
+      } finally {
+        setLoadingContacts(false);
+      }
+    }
+
+    loadContacts();
+  }, []);
   const toTel = (p) => (p || "").replace(/[^+\d]/g, "");
   const navigate = useNavigate();
   const startWith = (q) => navigate(`/ai?q=${encodeURIComponent(q)}`);
+  const [showModal, setShowModal] = useState(false);
+  const [form, setForm] = useState({
+    name: "",
+    phone: "",
+    relation: "",
+  });
+  const [saving, setSaving] = useState(false);
+  const [userLocation, setUserLocation] = useState(null);
+  const [locationError, setLocationError] = useState(null);
+  const [places, setPlaces] = useState([]);
+  const [loadingPlaces, setLoadingPlaces] = useState(false);
+  const [search, setSearch] = useState("");
+  const [activeCategory, setActiveCategory] = useState("all");
+  const [showLocationModal, setShowLocationModal] = useState(false);
+  const [isTrackingLocation, setIsTrackingLocation] = useState(false);
+  const [sortByDistance, setSortByDistance] = useState(false);
+  const [showFilters, setShowFilters] = useState(false);
+  const [maxDistance, setMaxDistance] = useState(10); // km
+  const [showChangeLocation, setShowChangeLocation] = useState(false);
+  const [cityQuery, setCityQuery] = useState("");
+  const [cityResults, setCityResults] = useState([]);
+  const [contactErrorModal, setContactErrorModal] = useState({
+    open: false,
+    message: "",
+  });
+
+  const CATEGORY_CONFIG = {
+    all: {
+      label: "All Services",
+      tags: [
+        '["amenity"="hospital"]',
+        '["amenity"="police"]',
+        '["amenity"="pharmacy"]',
+        '["amenity"="fire_station"]',
+        '["amenity"="atm"]',
+      ],
+      icon: <FiList />,
+    },
+    hospital: {
+      label: "Medical Facilities",
+      tags: ['["amenity"="hospital"]'],
+      icon: <FaHospitalAlt />,
+    },
+    police: {
+      label: "Law Enforcement",
+      tags: ['["amenity"="police"]'],
+      icon: <FiShield />,
+    },
+    pharmacy: {
+      label: "Pharmacies",
+      tags: ['["amenity"="pharmacy"]'],
+      icon: <FaCapsules />,
+    },
+    fire: {
+      label: "Fire Services",
+      tags: ['["amenity"="fire_station"]'],
+      icon: <FaFireExtinguisher />,
+    },
+    atm: {
+      label: "ATMs",
+      tags: ['["amenity"="atm"]'],
+      icon: <FiDollarSign />,
+    },
+  };
+
+  async function fetchNearbyPlaces(lat, lon, category) {
+    const tags = CATEGORY_CONFIG[category].tags;
+
+    const queryParts = tags
+      .map(
+        (tag) => `
+        node${tag}(around:5000,${lat},${lon});
+        way${tag}(around:5000,${lat},${lon});
+      `
+      )
+      .join("");
+
+    const query = `
+    [out:json];
+    (
+      ${queryParts}
+    );
+    out center tags;
+  `;
+
+    const res = await fetch("https://overpass-api.de/api/interpreter", {
+      method: "POST",
+      body: query,
+    });
+
+    const data = await res.json();
+    return data.elements;
+  }
+
+  useEffect(() => {
+    if (!userLocation) return;
+
+    async function loadPlaces() {
+      setLoadingPlaces(true);
+      try {
+        const data = await fetchNearbyPlaces(
+          userLocation.lat,
+          userLocation.lon,
+          activeCategory
+        );
+        setPlaces(data);
+      } catch (err) {
+        console.error(err);
+      } finally {
+        setLoadingPlaces(false);
+      }
+    }
+
+    loadPlaces();
+  }, [userLocation, activeCategory]);
 
   const categories = [
-    { icon: <FaClinicMedical />, label: "Medical Facilities", count: 8 },
-    { icon: <FiShield />, label: "Law Enforcement", count: 5 },
-    { icon: <FaCapsules />, label: "Pharmacies", count: 12 },
-    { icon: <FiDollarSign />, label: "Financial Services", count: 15 },
-    { icon: <FiFlag />, label: "Diplomatic Services", count: 1 },
-    { icon: <FiHome />, label: "Walk-in Clinics", count: 6, active: true },
+    { key: "all", icon: <FiList />, label: "All Services" },
+    { key: "hospital", icon: <FaClinicMedical />, label: "Medical Facilities" },
+    { key: "police", icon: <FiShield />, label: "Law Enforcement" },
+    { key: "pharmacy", icon: <FaCapsules />, label: "Pharmacies" },
+    { key: "fire", icon: <FaFireExtinguisher />, label: "Fire Services" },
+    { key: "atm", icon: <FiDollarSign />, label: "ATMs" },
   ];
 
-  const listings = [
-    {
-      name: "Hôpital Européen Georges-Pompidou",
-      type: "Emergency Department",
-      address: "20 Rue Leblanc, 75015 Paris, France",
-      rating: 4.3,
-      reviews: 892,
-      phone: "+33 1 56 09 20 00",
-      distance: "1.2 km",
-      open: true,
-      tags: ["Emergency Care", "Trauma", "ICU"],
-    },
-    {
-      name: "Hôpital Saint-Joseph",
-      type: "General Hospital",
-      address: "185 Rue Raymond Losserand, 75014 Paris",
-      rating: 4.1,
-      reviews: 654,
-      phone: "+33 1 44 12 33 33",
-      distance: "2.4 km",
-      open: true,
-      tags: ["Emergency", "Surgery", "Cardiology"],
-    },
-  ];
+  const filteredPlaces = places
+    .filter((p) =>
+      (p.tags?.name || "")
+        .toLowerCase()
+        .includes(search.toLowerCase())
+    )
+    .map((p) => {
+      const lat = p.lat ?? p.center?.lat;
+      const lon = p.lon ?? p.center?.lon;
+      if (!lat || !lon || !userLocation) return null;
+
+      return {
+        ...p,
+        _distance: Number(getDistanceKm(
+          userLocation.lat,
+          userLocation.lon,
+          lat,
+          lon
+        )),
+      };
+    })
+    .filter(Boolean)
+    .filter((p) => p._distance <= maxDistance)
+    .sort((a, b) => sortByDistance ? a._distance - b._distance : 0);
+
+  function getDistanceKm(lat1, lon1, lat2, lon2) {
+    const R = 6371; // km
+    const dLat = ((lat2 - lat1) * Math.PI) / 180;
+    const dLon = ((lon2 - lon1) * Math.PI) / 180;
+    const a =
+      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+      Math.cos((lat1 * Math.PI) / 180) *
+      Math.cos((lat2 * Math.PI) / 180) *
+      Math.sin(dLon / 2) *
+      Math.sin(dLon / 2);
+    return (R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))).toFixed(1);
+  }
+  async function searchCity(query) {
+    if (!query) return;
+
+    const res = await fetch(
+      `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(
+        query
+      )}&limit=5`
+    );
+
+    const data = await res.json();
+    setCityResults(data);
+  }
 
   return (
     <div className="dashboard-page">
@@ -79,67 +238,112 @@ export default function EmergencyPage() {
               </span>
               <div>
                 <div className="loc-title">
-                  Current Location <span className="chip active">Active</span>
+                  Current Location <span className={`chip ${isTrackingLocation ? "active" : ""}`}>
+                    {isTrackingLocation ? "Active" : "Not Active"}
+                  </span>
                 </div>
-                <div className="loc-sub">Paris, Île-de-France, France</div>
+                <div className="loc-sub">
+                  {isTrackingLocation
+                    ? "Using your current location"
+                    : userLocation
+                      ? "Using selected location"
+                      : "Location not set"}
+                </div>
+
               </div>
             </div>
-            <button className="textlink">Change Location</button>
-          </section>
+            <div className="loc-actions">
+              <button
+                className="textlink"
+                onClick={() => setShowChangeLocation(true)}
+              >
+                Change Location
+              </button>
 
+              <button
+                className="textlink"
+                onClick={() => {
+                  navigator.geolocation.getCurrentPosition(
+                    (pos) => {
+                      setUserLocation({
+                        lat: pos.coords.latitude,
+                        lon: pos.coords.longitude,
+                      });
+                      setIsTrackingLocation(true);
+                    },
+                    console.error,
+                    {
+                      enableHighAccuracy: true,
+                      maximumAge: 0,
+                    }
+                  );
+                }}
+              >
+                Use Current Location
+              </button>
+            </div>
+          </section>
           {/* Hotlines */}
           <section className="emer-hotlines">
             <h2>Emergency Hotlines</h2>
             <div className="hotline-grid">
-              <div className="hot-card">
+              <div className="hot-card"
+                onClick={() => window.location.href = "tel:181"}
+                style={{ cursor: "pointer" }}>
                 <div className="hot-head">
                   <span className="hot-icon">
-                    <FiPhoneCall />
+                    <FaFemale />
                   </span>
-                  <span className="hot-call">
+                  <a className="hot-call" href="tel:181">
                     <FiPhoneCall />
-                  </span>
+                  </a>
                 </div>
-                <div className="hot-number">112</div>
-                <div className="hot-title">General Emergency</div>
-                <div className="hot-sub">All emergencies</div>
+                <div className="hot-number">181</div>
+                <div className="hot-title">Women Helpline</div>
+                <div className="hot-sub">Women safety & emergency</div>
               </div>
-              <div className="hot-card">
+              <div className="hot-card"
+                onClick={() => window.location.href = "tel:100"}
+                style={{ cursor: "pointer" }}>
                 <div className="hot-head">
                   <span className="hot-icon">
                     <FiShield />
                   </span>
-                  <span className="hot-call">
+                  <a className="hot-call" href="tel:100">
                     <FiPhoneCall />
-                  </span>
+                  </a>
                 </div>
-                <div className="hot-number">17</div>
+                <div className="hot-number">100</div>
                 <div className="hot-title">Police</div>
                 <div className="hot-sub">Law enforcement</div>
               </div>
-              <div className="hot-card">
+              <div className="hot-card"
+                onClick={() => window.location.href = "tel:108"}
+                style={{ cursor: "pointer" }}>
                 <div className="hot-head">
                   <span className="hot-icon">
                     <FaAmbulance />
                   </span>
-                  <span className="hot-call">
+                  <a className="hot-call" href="tel:108">
                     <FiPhoneCall />
-                  </span>
+                  </a>
                 </div>
-                <div className="hot-number">15</div>
+                <div className="hot-number">108</div>
                 <div className="hot-title">Medical Emergency</div>
-                <div className="hot-sub">SAMU ambulance</div>
+                <div className="hot-sub">Free ambulance</div>
               </div>
-              <div className="hot-card">
+              <div className="hot-card"
+                onClick={() => window.location.href = "tel:101"}
+                style={{ cursor: "pointer" }}>
                 <div className="hot-head">
                   <span className="hot-icon">
                     <FaFireExtinguisher />
                   </span>
-                  <span className="hot-call">
+                  <a className="hot-call" href="tel:101">
                     <FiPhoneCall />
-                  </span>
+                  </a>
                 </div>
-                <div className="hot-number">18</div>
+                <div className="hot-number">101</div>
                 <div className="hot-title">Fire Department</div>
                 <div className="hot-sub">Fire & rescue</div>
               </div>
@@ -150,10 +354,14 @@ export default function EmergencyPage() {
           <div className="emer-searchbar">
             <div className="search-wrap">
               <FiSearch />
-              <input placeholder="Search for services, facilities, or addresses..." />
+              <input
+                placeholder="Search for services..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+              />
             </div>
             <div className="actions">
-              <button className="outline">
+              <button className="outline" onClick={() => setShowFilters(true)}>
                 <FiFilter /> Filters
               </button>
               <div className="toggle">
@@ -180,12 +388,15 @@ export default function EmergencyPage() {
               <div className="card">
                 <h3>Service Categories</h3>
                 <ul className="cat-list">
-                  <li className="cat-all">All Services</li>
                   {categories.map((c) => (
-                    <li key={c.label} className={c.active ? "active" : ""}>
+                    <li
+                      key={c.key}
+                      className={activeCategory === c.key ? "active" : ""}
+                      onClick={() => setActiveCategory(c.key)}
+                      style={{ cursor: "pointer" }}
+                    >
                       <span className="cat-ico">{c.icon}</span>
                       <span className="cat-name">{c.label}</span>
-                      <span className="cat-count">{c.count}</span>
                     </li>
                   ))}
                 </ul>
@@ -194,122 +405,234 @@ export default function EmergencyPage() {
               <div className="card contacts">
                 <div className="card-head">
                   <h3>Emergency Contacts</h3>
-                  <button className="icon-sm" aria-label="Add contact">
-                    <FiPlus />
-                  </button>
+                  {contacts.length < 3 && (
+                    <button
+                      className="icon-sm"
+                      aria-label="Add contact"
+                      title="Add contact"
+                      onClick={() => setShowModal(true)}
+                    >
+                      <FiPlus />
+                    </button>
+                  )}
+                  {showModal && (
+                    <div className="modal-backdrop">
+                      <div className="modal">
+                        <h3>Add Emergency Contact</h3>
+
+                        <input
+                          type="text"
+                          placeholder="Contact Name"
+                          value={form.name}
+                          onChange={(e) => setForm({ ...form, name: e.target.value })}
+                        />
+
+                        <input
+                          type="tel"
+                          placeholder="Phone Number"
+                          value={form.phone}
+                          onChange={(e) => setForm({ ...form, phone: e.target.value })}
+                        />
+
+                        <input
+                          type="text"
+                          placeholder="Relation (optional)"
+                          value={form.relation}
+                          onChange={(e) => setForm({ ...form, relation: e.target.value })}
+                        />
+
+                        <div className="modal-actions">
+                          <button
+                            className="outline"
+                            onClick={() => {
+                              setShowModal(false);
+                              setForm({ name: "", phone: "", relation: "" });
+                            }}
+                          >
+                            Cancel
+                          </button>
+
+                          <button
+                            className="primary"
+                            disabled={saving}
+                            onClick={async () => {
+                              if (!form.name || !form.phone) {
+                                setContactErrorModal({
+                                  open: true,
+                                  message: "Name and phone number are required to add an emergency contact.",
+                                });
+                                return;
+                              }
+
+                              try {
+                                setSaving(true);
+                                const newContact = await addEmergencyContact(form);
+                                setContacts((prev) => [...prev, newContact]);
+                                setShowModal(false);
+                                setForm({ name: "", phone: "", relation: "" });
+                              } catch (err) {
+                                setContactErrorModal({
+                                  open: true,
+                                  message: err.message || "Failed to add contact. Please try again.",
+                                });
+                              } finally {
+                                setSaving(false);
+                              }
+                            }}
+                          >
+                            {saving ? "Saving..." : "Save Contact"}
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
                 </div>
 
-                <div className="contact-card">
-                  <div className="contact-head">
-                    <div className="qicon">
-                      <FiUser />
-                    </div>
-                    <div className="qmain">
-                      <div className="qtitle">Mom</div>
-                      <div className="qsub">Family</div>
-                    </div>
-                  </div>
-                  <a
-                    className="phone-chip"
-                    href={`tel:${toTel("+1 555 123 4567")}`}
-                  >
-                    +1 555 123 4567
-                  </a>
-                  <a
-                    className="cta-call"
-                    href={`tel:${toTel("+1 555 123 4567")}`}
-                  >
-                    <FiPhoneCall /> <span>Call Now</span>
-                  </a>
-                </div>
+                {loadingContacts && <p>Loading contacts...</p>}
+                {error && <p className="error">{error}</p>}
 
-                <div className="contact-card">
-                  <div className="contact-head">
-                    <div className="qicon">
-                      <FiUser />
+                {contacts.map((c) => (
+                  <div key={c.id} className="contact-card">
+                    <div className="contact-head">
+                      <div className="qicon">
+                        <FiUser />
+                      </div>
+                      <div className="qmain">
+                        <div className="qtitle">{c.name}</div>
+                        <div className="qsub">{c.relation || "Emergency Contact"}</div>
+                      </div>
                     </div>
-                    <div className="qmain">
-                      <div className="qtitle">Hotel Concierge</div>
-                      <div className="qsub">Hotel</div>
+
+                    <a className="phone-chip" href={`tel:${toTel(c.phone)}`}>
+                      {c.phone}
+                    </a>
+
+                    <div className="contact-actions">
+                      <a className="cta-call" href={`tel:${toTel(c.phone)}`}>
+                        <FiPhoneCall /> <span>Call Now</span>
+                      </a>
+
+                      <button
+                        className="danger"
+                        onClick={async () => {
+                          await deleteEmergencyContact(c.id);
+                          setContacts((prev) => prev.filter((x) => x.id !== c.id));
+                        }}
+                      >
+                        Delete
+                      </button>
                     </div>
                   </div>
-                  <a
-                    className="phone-chip"
-                    href={`tel:${toTel("+33 1 42 60 30 30")}`}
-                  >
-                    +33 1 42 60 30 30
-                  </a>
-                  <a
-                    className="cta-call"
-                    href={`tel:${toTel("+33 1 42 60 30 30")}`}
-                  >
-                    <FiPhoneCall /> <span>Call Now</span>
-                  </a>
-                </div>
+                ))}
               </div>
-
-              {/* AI Assistant card removed by request */}
             </aside>
 
             {/* Main content */}
             <section className="emer-main">
-              {/* Safety alerts card removed per request */}
 
               <div className="card">
                 <div className="list-head">
                   <h3>
-                    Nearby Locations <span className="muted">(4 results)</span>
+                    Nearby {CATEGORY_CONFIG[activeCategory].label}{" "}
+                    <span className="muted">({filteredPlaces.length} results)</span>
                   </h3>
-                  <div className="sortby">
-                    Sort by <strong>Distance</strong> ▾
-                  </div>
+                  {view === "list" && (
+                    <div
+                      className="sortby"
+                      style={{ cursor: "pointer" }}
+                      onClick={() => setSortByDistance((prev) => !prev)}
+                    >
+                      Sort by{" "}
+                      <strong>
+                        {sortByDistance ? "Distance" : "Default"}
+                      </strong>{" "}
+                      ▾
+                    </div>
+                  )}
                 </div>
                 <div className="listings">
-                  {listings.map((it) => (
-                    <article key={it.name} className="place">
-                      <div className="pl-ico">
-                        <FaHospitalAlt />
-                      </div>
-                      <div className="pl-main">
-                        <h4>{it.name}</h4>
-                        <div className="pl-type">{it.type}</div>
-                        <div className="pl-meta">📍 {it.address}</div>
-                        <div className="pl-rate">
-                          ⭐ {it.rating}{" "}
-                          <span className="muted">({it.reviews} reviews)</span>{" "}
-                          ☎ {it.phone}
-                        </div>
-                        <div className="pl-tags">
-                          {it.tags.map((t) => (
-                            <span key={t} className="tag">
-                              {t}
-                            </span>
-                          ))}
-                        </div>
-                      </div>
-                      <div className="pl-actions">
-                        <div className="distance">
-                          <strong>{it.distance}</strong>
-                          <span className="open chip green">Open 24 Hours</span>
-                        </div>
-                        <div className="buttons">
-                          <button className="primary">Get Directions</button>
-                          <a
-                            className="outline"
-                            href={`tel:${toTel(it.phone)}`}
-                          >
-                            <FiPhoneCall /> Call Now
-                          </a>
-                          <button className="link">Details</button>
-                        </div>
-                      </div>
-                    </article>
-                  ))}
+                  {view === "list" && (
+                    <>
+                      {loadingPlaces && (
+                        <p>
+                          Loading nearby {CATEGORY_CONFIG[activeCategory].label.toLowerCase()}...
+                        </p>
+                      )}
+
+                      {filteredPlaces.map((p) => {
+                        const name = p.tags?.name || "Unnamed Service";
+                        const address =
+                          p.tags?.["addr:full"] ||
+                          `${p.tags?.["addr:street"] || ""} ${p.tags?.["addr:city"] || ""}`;
+
+                        const lat = p.lat ?? p.center?.lat;
+                        const lon = p.lon ?? p.center?.lon;
+                        if (!lat || !lon) return null;
+
+                        const distance = userLocation
+                          ? getDistanceKm(
+                            userLocation.lat,
+                            userLocation.lon,
+                            lat,
+                            lon
+                          )
+                          : null;
+
+                        const amenity = p.tags?.amenity || "service";
+                        const phone = p.tags?.phone || p.tags?.["contact:phone"];
+
+                        return (
+                          <article key={p.id} className="place">
+                            <div className="pl-ico">
+                              <FaHospitalAlt />
+                            </div>
+
+                            <div className="pl-main">
+                              <h4>{name}</h4>
+                              <div className="pl-type">
+                                {amenity.charAt(0).toUpperCase() + amenity.slice(1)}
+                              </div>
+                              <div className="pl-meta">
+                                📍 {address || "Address not available"}
+                              </div>
+                            </div>
+
+                            <div className="pl-actions">
+                              {distance && <div className="distance">{distance} km away</div>}
+                              <div className="buttons">
+                                <a
+                                  className="primary"
+                                  href={`https://www.openstreetmap.org/?mlat=${lat}&mlon=${lon}#map=17/${lat}/${lon}`}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                >
+                                  Get Directions
+                                </a>
+                                {phone && (
+                                  <a href={`tel:${toTel(phone)}`} className="outline">
+                                    <FiPhoneCall /> Call
+                                  </a>
+                                )}
+                              </div>
+                            </div>
+                          </article>
+                        );
+                      })}
+                    </>
+                  )}
+
+                  {view === "map" && (
+                    <EmergencyMap
+                      userLocation={userLocation}
+                      places={filteredPlaces}
+                    />
+                  )}
                 </div>
               </div>
 
               {/* Embassy card */}
-              <div className="embassy">
+              {/*<div className="embassy">
                 <div className="emb-ico">
                   <FaLandmark />
                 </div>
@@ -323,11 +646,126 @@ export default function EmergencyPage() {
                     <button className="emb-outline">Emergency Line</button>
                   </div>
                 </div>
-              </div>
+              </div>*/}
             </section>
           </div>
         </div>
       </main>
+      {
+        showFilters && (
+          <div className="modal-backdrop">
+            <div className="modal">
+              <h3>Filters</h3>
+
+              <label>
+                Maximum distance: <strong>{maxDistance} km</strong>
+              </label>
+
+              <input
+                type="range"
+                min="1"
+                max="25"
+                value={maxDistance}
+                onChange={(e) => setMaxDistance(Number(e.target.value))}
+              />
+
+              <div className="modal-actions">
+                <button
+                  className="outline"
+                  onClick={() => setShowFilters(false)}
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+          </div>
+        )
+      }
+      {userLocation && (
+        <pre style={{ fontSize: 12 }}>
+          {JSON.stringify(userLocation, null, 2)}
+        </pre>
+      )}
+      {showChangeLocation && (
+        <div className="modal-backdrop">
+          <div className="modal">
+            <h3>Change Location</h3>
+
+            <input
+              type="text"
+              placeholder="Enter city or area (e.g., Coimbatore)"
+              value={cityQuery}
+              onChange={(e) => {
+                setCityQuery(e.target.value);
+                searchCity(e.target.value);
+              }}
+            />
+
+            <div className="city-results">
+              {cityResults.map((c) => (
+                <div
+                  key={c.place_id}
+                  className="city-item"
+                  onClick={() => {
+                    setUserLocation({
+                      lat: Number(c.lat),
+                      lon: Number(c.lon),
+                    });
+                    setIsTrackingLocation(false); // manual location
+                    setPlaces([]); // clear old data
+                    setShowChangeLocation(false);
+                    setCityResults([]);
+                    setCityQuery("");
+                  }}
+                  style={{ cursor: "pointer" }}
+                >
+                  {c.display_name}
+                </div>
+              ))}
+            </div>
+
+            <div className="modal-actions">
+              <button
+                className="outline"
+                onClick={() => setShowChangeLocation(false)}
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {contactErrorModal.open && (
+        <div className="modal-backdrop">
+          <div className="modal">
+            <div className="modal-header">
+              <h3>Unable to Proceed</h3>
+              <button
+                onClick={() =>
+                  setContactErrorModal({ open: false, message: "" })
+                }
+              >
+                ✖
+              </button>
+            </div>
+
+            <div className="modal-body">
+              <p>{contactErrorModal.message}</p>
+            </div>
+
+            <div className="modal-actions">
+              <button
+                className="primary"
+                onClick={() =>
+                  setContactErrorModal({ open: false, message: "" })
+                }
+              >
+                OK
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

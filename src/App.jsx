@@ -12,6 +12,8 @@ import AIPage from "./pages/AIPage";
 import TodoPage from "./pages/TodoPage";
 import GamePage from "./pages/GamePage";
 import EmergencyPage from "./pages/EmergencyPage";
+import ProfilePage from "./pages/ProfilePage";
+import EditProfilePage from "./pages/EditProfilePage";
 
 function AppInner() {
   const location = useLocation();
@@ -25,6 +27,8 @@ function AppInner() {
     "/game",
     "/emergency",
     "/todo",
+    "/profile",
+    "/profile/edit",
   ];
   const showNavbar = !hideNavbarPaths.includes(location.pathname);
   useEffect(() => {
@@ -42,12 +46,14 @@ function AppInner() {
         <Route path="/signup" element={<SignupPage />} />
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/budget" element={<BudgetPage />} />
-        <Route path="/dashboard" element={<ExplorePage />} />
+        <Route path="/explore" element={<ExplorePage />} />
         <Route path="/planner" element={<PlannerPage />} />
         <Route path="/todo" element={<TodoPage />} />
         <Route path="/ai" element={<AIPage />} />
         <Route path="/game" element={<GamePage />} />
         <Route path="/emergency" element={<EmergencyPage />} />
+        <Route path="/profile" element={<ProfilePage />} />
+        <Route path="/profile/edit" element={<EditProfilePage />} />
       </Routes>
     </>
   );

@@ -8,9 +8,10 @@ import {
 } from "react-icons/fa";
 import { MdEmergency } from "react-icons/md";
 import { FiBell, FiUser } from "react-icons/fi";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 
 export default function NewNavbar() {
+  const navigate = useNavigate();
   return (
     <header className="newnav">
       <Link to="/dashboard" className="newnav-brand">
@@ -64,7 +65,11 @@ export default function NewNavbar() {
         <button className="newnav-action" aria-label="Notifications">
           <FiBell />
         </button>
-        <button className="newnav-action" aria-label="Profile">
+        <button
+          className="newnav-action"
+          aria-label="Profile"
+          onClick={() => navigate("/profile")}
+        >
           <FiUser />
         </button>
       </div>
