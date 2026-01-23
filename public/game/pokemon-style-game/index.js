@@ -20,6 +20,27 @@ for (let i = 0; i < charactersMapData.length; i += 70) {
 }
 console.log(charactersMap)
 
+// ===============================================
+// PORTAL SETUP - Gateway to Pygame World
+// ===============================================
+const portalImage = new Image()
+// Using fireball as placeholder - replace with actual portal sprite
+portalImage.src = './img/fireball.png'
+
+const portal = new Portal({
+  position: {
+    x: 200,  // Adjust position to place portal in your world
+    y: 300   // Place near spawn or accessible area
+  },
+  image: portalImage,
+  frames: {
+    max: 4,
+    hold: 15
+  },
+  scale: 3,
+  targetUrl: '/game/pygame/build/web/index.html'
+})
+
 const boundaries = []
 const offset = {
   x: -735,
@@ -188,7 +209,8 @@ const movables = [
   ...boundaries,
   foreground,
   ...battleZones,
-  ...characters
+  ...characters,
+  portal  // Portal moves with the world
 ]
 const renderables = [
   background,
@@ -196,6 +218,7 @@ const renderables = [
   ...battleZones,
   ...characters,
   player,
+  portal,  // Portal renders above player
   foreground
 ]
 
@@ -205,6 +228,12 @@ const battle = {
 
 function animate() {
   const animationId = window.requestAnimationFrame(animate)
+  
+  // PAUSE CHECK: Don't update game if pygame overlay is active
+  if (!isPokemonGameActive()) {
+    return
+  }
+  
   renderables.forEach((renderable) => {
     renderable.draw()
   })
@@ -213,6 +242,12 @@ function animate() {
   player.animate = false
 
   if (battle.initiated) return
+
+  // ===============================================
+  // PORTAL COLLISION CHECK
+  // ===============================================
+  const playerNearPortal = checkPortalCollision({ player, portal })
+  showPortalPrompt(playerNearPortal)
 
   // activate a battle
   if (keys.w.pressed || keys.a.pressed || keys.s.pressed || keys.d.pressed) {
@@ -440,6 +475,19 @@ window.addEventListener('keydown', (e) => {
       document.querySelector('#characterDialogueBox').innerHTML = firstMessage
       document.querySelector('#characterDialogueBox').style.display = 'flex'
       player.isInteracting = true
+      break
+    case 'e':
+    case 'E':
+      // ===============================================
+      // PORTAL ACTIVATION (Press E near portal)
+      // ===============================================
+      const nearPortal = checkPortalCollision({ player, portal })
+      if (nearPortal) {
+        portal.activate({
+          playerName: 'Traveler',
+          score: 0
+        })
+      }
       break
     case 'w':
       keys.w.pressed = true

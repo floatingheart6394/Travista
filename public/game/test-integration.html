@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Travista Game Integration Test</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Courier New', monospace;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        
+        .container {
+            background: rgba(0, 0, 0, 0.7);
+            border-radius: 15px;
+            padding: 40px;
+            max-width: 800px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+        }
+        
+        h1 {
+            font-size: 32px;
+            margin-bottom: 10px;
+            text-align: center;
+            color: #00ffff;
+        }
+        
+        .subtitle {
+            text-align: center;
+            opacity: 0.7;
+            margin-bottom: 30px;
+        }
+        
+        .section {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 10px;
+            border-left: 4px solid #00ffff;
+        }
+        
+        .section h2 {
+            color: #00ffff;
+            margin-bottom: 15px;
+            font-size: 20px;
+        }
+        
+        .check-item {
+            padding: 10px;
+            margin: 10px 0;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 5px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .status {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+        
+        .status.success { background: #00ff00; }
+        .status.error { background: #ff0000; }
+        .status.warning { background: #ffaa00; }
+        .status.pending { background: #888; }
+        
+        button {
+            width: 100%;
+            padding: 15px;
+            margin: 10px 0;
+            background: linear-gradient(135deg, #00ffff, #00aaff);
+            border: none;
+            border-radius: 8px;
+            color: white;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 255, 255, 0.4);
+        }
+        
+        .code {
+            background: #1e1e1e;
+            padding: 15px;
+            border-radius: 5px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            overflow-x: auto;
+            margin: 10px 0;
+        }
+        
+        .warning-box {
+            background: rgba(255, 170, 0, 0.2);
+            border: 2px solid #ffaa00;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+        }
+        
+        .success-box {
+            background: rgba(0, 255, 0, 0.2);
+            border: 2px solid #00ff00;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎮 TRAVISTA GAME INTEGRATION</h1>
+        <p class="subtitle">Hub World + Pygame Portal System</p>
+        
+        <div class="section">
+            <h2>📋 Setup Checklist</h2>
+            
+            <div class="check-item">
+                <div class="status" id="status-pokemon"></div>
+                <span>Pokemon-style hub world files</span>
+            </div>
+            
+            <div class="check-item">
+                <div class="status" id="status-portal"></div>
+                <span>portal.js script</span>
+            </div>
+            
+            <div class="check-item">
+                <div class="status" id="status-pygame"></div>
+                <span>Pygame source files</span>
+            </div>
+            
+            <div class="check-item">
+                <div class="status pending" id="status-pygbag"></div>
+                <span>Pygbag build (pygame-web/)</span>
+            </div>
+        </div>
+        
+        <div class="section">
+            <h2>🚀 Test Links</h2>
+            
+            <button onclick="testPokemonGame()">
+                Test Pokemon Hub World
+            </button>
+            
+            <button onclick="testPygameWeb()">
+                Test Pygame Web Build
+            </button>
+            
+            <button onclick="testPortal()">
+                Test Portal System (Both Games)
+            </button>
+        </div>
+        
+        <div class="section">
+            <h2>🔧 Build Instructions</h2>
+            <p>To build the pygame game for web:</p>
+            <div class="code">
+cd public/game/pygame<br>
+python -m pygbag .<br>
+# OR run the automated script:<br>
+./build-pygame.ps1
+            </div>
+        </div>
+        
+        <div class="warning-box">
+            <strong>⚠️ First Time Setup:</strong>
+            <p>You must build the pygame game with pygbag before the portal will work!</p>
+        </div>
+        
+        <div class="section">
+            <h2>📁 Expected Structure</h2>
+            <div class="code">
+public/game/<br>
+├── pokemon-style-game/ ✅<br>
+│   ├── index.html<br>
+│   ├── index.js<br>
+│   ├── portal.js ⭐ NEW<br>
+│   └── ...<br>
+├── pygame/ ✅<br>
+│   ├── main.py<br>
+│   ├── assets/<br>
+│   └── ...<br>
+└── pygame-web/ ⚠️ BUILD REQUIRED<br>
+    ├── index.html<br>
+    ├── *.wasm<br>
+    └── ...
+            </div>
+        </div>
+        
+        <div id="result-box"></div>
+    </div>
+    
+    <script>
+        // Check file existence
+        async function checkFile(url, statusId) {
+            try {
+                const response = await fetch(url, { method: 'HEAD' });
+                const statusEl = document.getElementById(statusId);
+                if (response.ok) {
+                    statusEl.classList.add('success');
+                    return true;
+                } else {
+                    statusEl.classList.add('error');
+                    return false;
+                }
+            } catch (e) {
+                document.getElementById(statusId).classList.add('error');
+                return false;
+            }
+        }
+        
+        // Run checks on page load
+        window.addEventListener('load', async () => {
+            await checkFile('/game/pokemon-style-game/index.html', 'status-pokemon');
+            await checkFile('/game/pokemon-style-game/portal.js', 'status-portal');
+            await checkFile('/game/pygame/main.py', 'status-pygame');
+            await checkFile('/game/pygame-web/index.html', 'status-pygbag');
+        });
+        
+        function testPokemonGame() {
+            const url = '/game/pokemon-style-game/index.html';
+            window.open(url, '_blank');
+            showResult('Opening Pokemon hub world...', 'success');
+        }
+        
+        function testPygameWeb() {
+            const url = '/game/pygame-web/index.html';
+            window.open(url, '_blank');
+            showResult('Opening Pygame web build...', 'success');
+        }
+        
+        function testPortal() {
+            const url = '/game/pokemon-style-game/index.html';
+            window.open(url, '_blank');
+            showResult('Opening hub world. Walk to the portal and press E!', 'success');
+        }
+        
+        function showResult(message, type) {
+            const box = document.getElementById('result-box');
+            const className = type === 'success' ? 'success-box' : 'warning-box';
+            box.innerHTML = `<div class="${className}"><strong>${message}</strong></div>`;
+            setTimeout(() => {
+                box.innerHTML = '';
+            }, 5000);
+        }
+    </script>
+</body>
+</html>
