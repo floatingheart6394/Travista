@@ -4,7 +4,7 @@ from app.schemas.ai_assistant import (
     OCRResponse, OCRWithRAGRequest, OCRWithRAGResponse, TravelDocumentAnalysis,
     ReceiptScanResponse
 )
-from app.core.openai_client import ask_openai
+from app.core.openai_client import ask_openai, ask_openai_long
 from app.rag.pipeline import rag_pipeline
 from app.ocr.ocr_service import extract_text_from_image, extract_travel_info, ocr_with_rag, extract_receipt_data
 from app.dependencies.auth import get_current_user_id
@@ -19,9 +19,19 @@ async def chat_with_ai(
     payload: AIChatRequest,
     user_id: int = Security(get_current_user_id)
 ):
-    """Generic chat endpoint without RAG context."""
+    """Generic chat endpoint without RAG context. Detects itinerary requests and uses extended tokens."""
     try:
-        reply = ask_openai(payload.message)
+        # Check if this is an itinerary/travel planning request
+        is_itinerary = any(keyword in payload.message.lower() 
+                          for keyword in ['itinerary', 'day 1', 'day 2', 'day 3', 'morning', 'afternoon', 'evening', '₹'])
+        
+        if is_itinerary:
+            # Use extended token limit for comprehensive itineraries
+            reply = ask_openai_long(payload.message, max_tokens=2000)
+        else:
+            # Use normal token limit for regular chat
+            reply = ask_openai(payload.message)
+        
         return {"reply": reply}
     except Exception as e:
         from fastapi import HTTPException
@@ -229,26 +239,44 @@ async def scan_receipt(
                 "error": "Could not read the receipt image. Please try a clearer image."
             }
         
-        extracted_text = ocr_result.get("text", "")
+        # Prefer raw text to avoid losing separators (like / in dates)
+        raw_text = ocr_result.get("raw_text", "")
+        cleaned_text = ocr_result.get("text", "")
+        extracted_text = raw_text or cleaned_text
         
-        # Extract receipt data with category detection
+        # Log both versions for debugging
+        print(f"\n[OCR DEBUG] === OCR EXTRACTION DEBUG ===")
+        print(f"[OCR DEBUG] Raw text length: {len(raw_text)}")
+        print(f"[OCR DEBUG] Raw text:\n{raw_text[:500]}")
+        print(f"[OCR DEBUG] Cleaned text length: {len(cleaned_text)}")
+        print(f"[OCR DEBUG] Cleaned text:\n{cleaned_text[:500]}")
+        
+        # Extract receipt data using raw text first (for better date detection)
+        # since date formatting might be preserved better in raw text
         receipt_data = extract_receipt_data(extracted_text)
+        
+        # Log extracted data for debugging
+        print(f"[OCR DEBUG] Receipt data: {receipt_data}")
         
         return {
             "status": "success",
             "extracted_text": extracted_text,
-            "vendor": receipt_data.get("vendor", "Receipt"),
+            "vendor": receipt_data.get("vendor", "Receipt Item"),
             "amount": receipt_data.get("amount"),
             "amount_confidence": receipt_data.get("amount_confidence", 0),
-            "category": receipt_data.get("category", "shopping"),
+            "category": receipt_data.get("category", "food"),
             "category_confidence": receipt_data.get("category_confidence", 0),
             "category_scores": receipt_data.get("category_scores", {}),
+            "detected_date": receipt_data.get("detected_date"),
             "error": None
         }
     
     except Exception as e:
+        print(f"[OCR DEBUG] CRITICAL ERROR in scan-receipt endpoint: {e}")
+        import traceback
+        traceback.print_exc()
         from fastapi import HTTPException
         raise HTTPException(
             status_code=500,
-            detail="Unable to process the receipt. Please try another image."
+            detail=f"Unable to process the receipt: {str(e)}"
         )

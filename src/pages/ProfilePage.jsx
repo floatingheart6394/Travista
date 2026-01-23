@@ -17,6 +17,7 @@ import {
 } from "react-icons/fi";
 
 import NewNavbar from "../components/NewNavbar";
+import { fetchProfile, updateProfile } from "../services/profileService";
 
 const SETTINGS_KEY = "travista.profile.settings";
 const PROFILE_PUBLIC_KEY = "travista.profile.public";
@@ -117,6 +118,11 @@ export default function ProfilePage() {
   const initialProfile = useMemo(() => readPublicProfile(), []);
   const initialDetails = useMemo(() => readPersonalDetails(), []);
 
+  // Display name shown in header (updates only after save)
+  const [displayName, setDisplayName] = useState(
+    String(initialProfile.fullName || "").trim() || "Alex Thompson"
+  );
+
   const [fullName, setFullName] = useState(initialProfile.fullName);
   const [username, setUsername] = useState(initialProfile.username);
   const [bio, setBio] = useState(initialProfile.bio);
@@ -152,7 +158,29 @@ export default function ProfilePage() {
   const [twoFactorEnabled, setTwoFactorEnabled] = useState(initialDetails.twoFactorEnabled);
   const [isDetailsSaved, setIsDetailsSaved] = useState(false);
 
-  const name = String(fullName || "").trim() || "Alex Thompson";
+  // Load profile from backend
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      try {
+        const data = await fetchProfile();
+        if (!mounted) return;
+        setFullName(data.name || "");
+        setDisplayName(data.name || "Alex Thompson");
+        setEmail(data.email || "");
+        if (data.profile_image_url) {
+          setPhotoDataUrl(data.profile_image_url);
+        }
+      } catch (err) {
+        console.error("Failed to load profile", err);
+      }
+    })();
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  const name = String(displayName || "").trim() || "Alex Thompson";
 
   useEffect(() => {
     if (!isProfileSaved) return;
@@ -203,7 +231,7 @@ export default function ProfilePage() {
     reader.readAsDataURL(file);
   };
 
-  const onSaveProfile = () => {
+  const onSaveProfile = async () => {
     const payload = {
       fullName: String(fullName || "").trim(),
       username: String(username || "").trim(),
@@ -218,10 +246,23 @@ export default function ProfilePage() {
       preferredTravelStyle: String(preferredTravelStyle || "").trim(),
     };
     localStorage.setItem(PROFILE_PUBLIC_KEY, JSON.stringify(payload));
-    setIsProfileSaved(true);
+
+    try {
+      await updateProfile({
+        name: payload.fullName,
+        email: email || "",
+        profile_image_url: photoDataUrl || null,
+      });
+      setDisplayName(payload.fullName || "Alex Thompson");
+      setIsProfileSaved(true);
+    } catch (err) {
+      console.error("Profile update failed", err);
+      setIsProfileSaved(false);
+      alert(err.message || "Failed to save profile");
+    }
   };
 
-  const onSaveDetails = () => {
+  const onSaveDetails = async () => {
     const payload = {
       phoneNumber: String(phoneNumber || "").trim(),
       email: String(email || "").trim(),
@@ -240,7 +281,19 @@ export default function ProfilePage() {
       twoFactorEnabled: Boolean(twoFactorEnabled),
     };
     localStorage.setItem(PROFILE_DETAILS_KEY, JSON.stringify(payload));
-    setIsDetailsSaved(true);
+    try {
+      await updateProfile({
+        name: fullName || "",
+        email: payload.email,
+        profile_image_url: photoDataUrl || null,
+      });
+      setDisplayName(fullName || "Alex Thompson");
+      setIsDetailsSaved(true);
+    } catch (err) {
+      console.error("Details update failed", err);
+      setIsDetailsSaved(false);
+      alert(err.message || "Failed to save details");
+    }
   };
 
   const openPanel = (key) => {
@@ -595,12 +648,12 @@ export default function ProfilePage() {
 
                   <div className="account-field">
                     <label>Email</label>
-                    <input
-                      type="email"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      placeholder="name@example.com"
-                    />
+                     <input
+                       type="email"
+                       value={email}
+                       placeholder="name@example.com"
+                       readOnly
+                     />
                   </div>
 
                   <div className="account-sectionTitle">Emergency</div>

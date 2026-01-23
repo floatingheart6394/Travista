@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { FiArrowLeft, FiCamera, FiSave } from "react-icons/fi";
 
 import NewNavbar from "../components/NewNavbar";
+import { fetchProfile, updateProfile } from "../services/profileService";
 
 const PROFILE_PUBLIC_KEY = "travista.profile.public";
 
@@ -40,7 +41,31 @@ export default function EditProfilePage() {
   const [username, setUsername] = useState(initial.username);
   const [bio, setBio] = useState(initial.bio);
   const [photoDataUrl, setPhotoDataUrl] = useState(initial.photoDataUrl);
+  const [email, setEmail] = useState("");
   const [isSaved, setIsSaved] = useState(false);
+
+  // Fetch profile from backend on mount
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      try {
+        const data = await fetchProfile();
+        if (!mounted) return;
+        setFullName(data.name || "");
+        setUsername(data.username || "");
+        setBio(data.bio || "");
+        setEmail(data.email || "");
+        if (data.profile_image_url) {
+          setPhotoDataUrl(data.profile_image_url);
+        }
+      } catch (err) {
+        console.error("Failed to load profile", err);
+      }
+    })();
+    return () => {
+      mounted = false;
+    };
+  }, []);
 
   useEffect(() => {
     if (!isSaved) return;
@@ -60,7 +85,7 @@ export default function EditProfilePage() {
     reader.readAsDataURL(file);
   };
 
-  const onSave = () => {
+  const onSave = async () => {
     const payload = {
       fullName: String(fullName || "").trim(),
       username: String(username || "").trim(),
@@ -69,7 +94,18 @@ export default function EditProfilePage() {
     };
 
     localStorage.setItem(PROFILE_PUBLIC_KEY, JSON.stringify(payload));
-    setIsSaved(true);
+    try {
+      await updateProfile({
+        name: payload.fullName,
+        email: email || "",
+        profile_image_url: photoDataUrl || null,
+      });
+      setIsSaved(true);
+    } catch (err) {
+      console.error("Profile update failed", err);
+      setIsSaved(false);
+      alert(err.message || "Failed to save profile");
+    }
   };
 
   const avatarInitials = initialsFromName(fullName);
@@ -153,8 +189,6 @@ export default function EditProfilePage() {
             </div>
 
             <div className="account-actionsRow">
-              <button className="account-save secondary" type="button" onClick={() => navigate("/profile")}
-                >Done</button>
               <button className="account-save" type="button" onClick={onSave}>
                 <FiSave />
                 <span>{isSaved ? "Saved" : "Save Changes"}</span>

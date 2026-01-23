@@ -8,7 +8,8 @@ import pytesseract  # type: ignore
 from PIL import Image  # type: ignore
 import io
 import re
-from typing import Dict, List, Tuple
+from datetime import datetime
+from typing import Dict, List, Tuple, Optional
 pytesseract.pytesseract.tesseract_cmd = (
     r"C:\Users\reshm\AppData\Local\Programs\Tesseract-OCR\tesseract.exe"
 )
@@ -19,23 +20,42 @@ def preprocess_image(image: Image.Image) -> Image.Image:
     - Convert to grayscale
     - Increase contrast
     - Resize if too small
+    - Enhance sharpness
     """
-    # Convert to grayscale
-    img_gray = image.convert('L')
-    
-    # Enhance contrast for better text recognition
-    from PIL import ImageEnhance  # type: ignore
-    enhancer = ImageEnhance.Contrast(img_gray)
-    img_enhanced = enhancer.enhance(2.0)
-    
-    # Resize if image is too small (less than 300px width)
-    width, height = img_enhanced.size
-    if width < 300:
-        scale_factor = 300 / width
+    try:
+        # Convert to RGB first, then grayscale for better quality
+        if image.mode != 'RGB':
+            image = image.convert('RGB')
+        
+        # Significantly upscale image for better text recognition (especially small text like dates)
+        width, height = image.size
+        scale_factor = 3  # Aggressive scaling
+        if width < 1200:
+            scale_factor = max(1200 / width, 3)
         new_size = (int(width * scale_factor), int(height * scale_factor))
-        img_enhanced = img_enhanced.resize(new_size, Image.Resampling.LANCZOS)
-    
-    return img_enhanced
+        image = image.resize(new_size, Image.Resampling.LANCZOS)
+        
+        # Convert to grayscale
+        img_gray = image.convert('L')
+        
+        # Enhance contrast for better text recognition
+        from PIL import ImageEnhance  # type: ignore
+        enhancer = ImageEnhance.Contrast(img_gray)
+        img_enhanced = enhancer.enhance(2.5)  # Higher contrast
+        
+        # Enhance brightness
+        enhancer_bright = ImageEnhance.Brightness(img_enhanced)
+        img_enhanced = enhancer_bright.enhance(1.2)
+        
+        # Enhance sharpness to improve text clarity
+        enhancer_sharp = ImageEnhance.Sharpness(img_enhanced)
+        img_enhanced = enhancer_sharp.enhance(2.0)  # More sharpness
+        
+        return img_enhanced
+    except Exception as e:
+        print(f"[OCR DEBUG] Error in preprocess_image: {e}")
+        # Return original grayscale if preprocessing fails
+        return image.convert('L')
 
 
 def extract_text_from_image(image_bytes: bytes, lang: str = "eng") -> Dict:
@@ -56,15 +76,39 @@ def extract_text_from_image(image_bytes: bytes, lang: str = "eng") -> Dict:
         # Preprocess for better accuracy
         processed_image = preprocess_image(image)
         
-        # Extract text using Pytesseract
-        extracted_text = pytesseract.image_to_string(processed_image, lang=lang)
+        # Try multiple PSM (Page Segmentation Mode) configurations for better results
+        # PSM 6: Assume a single uniform block of text (default, good for receipts)
+        # PSM 3: Fully automatic page segmentation (better for complex layouts)
+        extracted_text = ""
+        best_confidence = 0
         
-        # Get detailed data with confidence scores
-        data = pytesseract.image_to_data(processed_image, output_type='dict', lang=lang)
+        for psm_mode in [6, 3, 4]:
+            try:
+                config = f'--psm {psm_mode}'
+                text_attempt = pytesseract.image_to_string(processed_image, lang=lang, config=config)
+                data_attempt = pytesseract.image_to_data(processed_image, output_type='dict', lang=lang, config=config)
+                
+                # Calculate confidence
+                confidences = [int(conf) for conf in data_attempt['conf'] if int(conf) > 0]
+                avg_conf = sum(confidences) / len(confidences) if confidences else 0
+                
+                # Use the result with best confidence
+                if avg_conf > best_confidence:
+                    best_confidence = avg_conf
+                    extracted_text = text_attempt
+                    data = data_attempt
+            except Exception as e:
+                print(f"[OCR DEBUG] PSM {psm_mode} failed: {e}")
+                continue
+        
+        # Fallback to default if all PSM modes failed
+        if not extracted_text:
+            extracted_text = pytesseract.image_to_string(processed_image, lang=lang)
+            data = pytesseract.image_to_data(processed_image, output_type='dict', lang=lang)
         
         # Calculate average confidence (filter out zero values)
         confidences = [int(conf) for conf in data['conf'] if int(conf) > 0]
-        avg_confidence = sum(confidences) / len(confidences) if confidences else 0
+        avg_confidence = sum(confidences) / len(confidences) if confidences else best_confidence
         
         # Clean up extracted text
         cleaned_text = clean_text(extracted_text)
@@ -105,8 +149,8 @@ def clean_text(text: str) -> str:
     # Remove extra whitespace
     text = re.sub(r'\s+', ' ', text)
     
-    # Remove special characters that are OCR artifacts
-    text = re.sub(r'[^\w\s\.\,\!\?\-\:\;\(\)\'\"&]', '', text)
+    # Remove special characters that are OCR artifacts (keep common date separators like /)
+    text = re.sub(r'[^\w\s\.\,\!\?\-\:\;\(\)\'\"&/]', '', text)
     
     # Strip leading/trailing whitespace
     text = text.strip()
@@ -210,71 +254,316 @@ def extract_receipt_data(text: str) -> Dict:
     
     Returns high-accuracy detection with confidence scores
     """
-    text_lower = text.lower()
+    try:
+        if not text or not text.strip():
+            return {
+                "vendor": "Receipt Item",
+                "amount": None,
+                "amount_confidence": 0,
+                "category": "shopping",
+                "category_confidence": 0,
+                "category_scores": {},
+                "detected_date": None,
+                "text": text
+            }
+        
+        text_lower = text.lower()
     
-    # AMOUNT DETECTION (high accuracy)
-    amount_patterns = [
-        r'(?:total|subtotal|amount|price|cost|paid|due|balance)[\s:]*[\$€£₹]?\s*([0-9]+\.?[0-9]*)',
-        r'[\$€£₹]\s*([0-9]+\.?[0-9]*)',
-        r'([0-9]+\.?[0-9]*)\s*(?:USD|EUR|GBP|INR|dollars|euros|pounds|rupees)',
-    ]
+        # DATE DETECTION (detect a receipt/bill date)
+        print(f"\n[OCR DEBUG] === DATE DETECTION ===")
+        print(f"[OCR DEBUG] Searching in text of length: {len(text)}")
+        print(f"[OCR DEBUG] First 500 chars of text:\n{text[:500]}")
+        
+        # Quick test: Does the date string exist in the text?
+        if "Date :" in text or "Date:" in text:
+            print(f"[OCR DEBUG] ✓ Found 'Date :' or 'Date:' in text")
+            # Extract the line containing Date
+            for line in text.split('\n'):
+                if 'Date' in line and '/' in line:
+                    print(f"[OCR DEBUG] Date line found: '{line}'")
+        
+        # Look for dates - prioritize most specific patterns first
+        date_patterns = [
+            # Exact "Date : XX/XX/XXXX" format (with space after colon)
+            r"Date\s*:\s*(\d{1,2}/\d{1,2}/\d{4})",  # Date : 09/01/2026
+            r"Date\s*[:=]\s*(\d{1,2}[/-]\d{1,2}[/-]\d{2,4})",  # Date: 09/01/2026
+            # Standard formats - prioritize 4-digit years
+            r"\b(\d{2}/\d{2}/\d{4})\b",  # 09/01/2026 (full year, 2-digit day/month)
+            r"\b(\d{1,2}[/-]\d{1,2}[/-]\d{4})\b",  # 9/1/2026 (full year)
+            # Month names
+            r"(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+\d{1,2}(?:,?\s+\d{2,4})?",  # Jan 22 2026
+            r"\d{1,2}\s+(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+\d{2,4}",  # 22 Jan 2026
+            # Context-aware: Look near Time field
+            r"Time[^\n]*\n[^\n]*(\d{1,2}[/-]\d{1,2}[/-]\d{2,4})",  # Date near Time line
+            r"(\d{1,2}[/-]\d{1,2}[/-]\d{2,4})[^\n]*Time",  # Date before Time
+            # Near Bill No
+            r"Bill\s*No[^\n]*(\d{1,2}[/-]\d{1,2}[/-]\d{2,4})",  # Date on same line as Bill No
+            # Aggressive - with lots of whitespace/noise
+            r"(\d{1,2})\s*[/\-\.]\s*(\d{1,2})\s*[/\-\.]\s*(\d{4})",  # Spaces around separators (4-digit year)
+            # Compressed formats like 1801/26
+            r"\b(\d{2})(\d{2})/(\d{2,4})\b",
+            r"\b(\d{2})/(\d{2})(\d{2,4})\b",
+        ]
+
+        def _parse_date_str(s: str) -> Optional[str]:
+            """Convert a matched date string to ISO YYYY-MM-DD if possible."""
+            original = s
+            s_clean = s.replace("\n", " ").replace("\r", "").strip()
+            # Handle compressed day+month forms like 1801/26 -> 18/01/26
+            compressed_dm_y = re.match(r'^(\d{2})(\d{2})/(\d{2,4})$', s_clean)
+            if compressed_dm_y:
+                s_clean = f"{compressed_dm_y.group(1)}/{compressed_dm_y.group(2)}/{compressed_dm_y.group(3)}"
+            compressed_d_mm = re.match(r'^(\d{2})/(\d{2})(\d{2,4})$', s_clean)
+            if compressed_d_mm:
+                s_clean = f"{compressed_d_mm.group(1)}/{compressed_d_mm.group(2)}/{compressed_d_mm.group(3)}"
+            # Remove extra spaces around separators
+            s_clean = re.sub(r'\s+', ' ', s_clean)
+            s_clean = re.sub(r'\s*[/\-\.]\s*', '/', s_clean)  # Normalize separators (escape hyphen)
+            
+            fmt_candidates = [
+                "%d/%m/%Y", "%m/%d/%Y", "%d/%m/%y", "%m/%d/%y",
+                "%d-%m-%Y", "%d-%m-%y", "%m-%d-%Y", "%m-%d-%y",
+                "%b %d %Y", "%b %d, %Y", "%B %d %Y", "%B %d, %Y",
+                "%d %b %Y", "%d %B %Y", "%d %b, %Y", "%d %B, %Y",
+                "%b %d", "%B %d", "%d %b", "%d %B",
+            ]
+            for fmt in fmt_candidates:
+                try:
+                    dt = datetime.strptime(s_clean, fmt)
+                    # If year parsed below 2000 and the original looked like a 2-digit year, bump to 2000s
+                    parts = re.split(r'[/-]', s_clean)
+                    year_token = parts[-1] if parts else ""
+                    if dt.year < 2000 and len(year_token) <= 2:
+                        dt = dt.replace(year=2000 + (dt.year % 100))
+                    # If year missing in format, default to current year
+                    if dt.year < 1900:
+                        dt = dt.replace(year=datetime.utcnow().year)
+                    return dt.strftime("%Y-%m-%d")
+                except ValueError:
+                    continue
+            return None
+
+        detected_date = None
+        for pattern in date_patterns:
+            try:
+                matches = re.findall(pattern, text, re.IGNORECASE)
+                print(f"[OCR DEBUG] Pattern '{pattern[:50]}...'")
+                print(f"[OCR DEBUG]   -> Matches: {matches} (type: {type(matches[0]) if matches else 'N/A'})")
+                for match in matches:
+                    try:
+                        print(f"[OCR DEBUG]   -> Processing match: {match} (type: {type(match)})")
+                        # Handle both string matches and tuple matches (from grouped patterns)
+                        if isinstance(match, tuple):
+                            # For patterns with groups, reconstruct the date
+                            if len(match) >= 3:
+                                match_str = f"{match[0]}/{match[1]}/{match[2]}"
+                            else:
+                                match_str = "/".join(str(m) for m in match)
+                        else:
+                            match_str = match
+                        
+                        print(f"[OCR DEBUG]   -> match_str: '{match_str}'")
+                        
+                        # Filter out address-like dates (e.g., 11/2 from "11/2 NT NAGAR")
+                        # Valid dates should have day <= 31, month <= 12, and year >= 2000
+                        parts = match_str.split('/')
+                        print(f"[OCR DEBUG]   -> parts: {parts}")
+                        if len(parts) >= 3:
+                            try:
+                                day, month, year = int(parts[0]), int(parts[1]), int(parts[2])
+                                print(f"[OCR DEBUG]   -> Parsed: day={day}, month={month}, year={year}")
+                                # Skip if it looks like an address (no year or invalid year)
+                                if year < 100:  # 2-digit year
+                                    year += 2000
+                                if year < 2000 or year > 2099:
+                                    print(f"[OCR DEBUG]   -> Skipping invalid year: {year}")
+                                    continue
+                                if day > 31 or month > 12 or day < 1 or month < 1:
+                                    print(f"[OCR DEBUG]   -> Skipping invalid date: day={day}, month={month}")
+                                    continue
+                            except (ValueError, IndexError) as e:
+                                print(f"[OCR DEBUG]   -> Parsing error: {e}")
+                                pass
+                        
+                        parsed = _parse_date_str(match_str)
+                        print(f"[OCR DEBUG]   -> _parse_date_str returned: {parsed}")
+                        print(f"[OCR DEBUG]   -> '{match_str}' parsed to: {parsed}")
+                        if parsed:
+                            detected_date = parsed
+                            print(f"[OCR DEBUG]   -> SUCCESS! Using date: {detected_date}")
+                            break
+                    except Exception as e:
+                        print(f"[OCR DEBUG]   -> Error processing match '{match}': {e}")
+                        continue
+                if detected_date:
+                    break
+            except Exception as e:
+                print(f"[OCR DEBUG] Error with pattern '{pattern}': {e}")
+                continue
+        
+        if not detected_date:
+            print(f"[OCR DEBUG] No date detected from any pattern")
+        print(f"[OCR DEBUG] Final detected_date: {detected_date}")
+        
+        # AMOUNT DETECTION (enhanced with more patterns)
+        amount_patterns = [
+            # Pattern 1: total/amount keywords with currency symbols and numbers
+            r'(?:total|subtotal|amount|price|cost|paid|due|balance|sum)[\s:]*[\$€£₹]?\s*([0-9]+[.,][0-9]{2})',
+            # Pattern 2: Currency symbol followed by amount
+            r'[\$€£₹]\s*([0-9]+[.,][0-9]{2})',
+            # Pattern 3: Amount with currency code
+            r'([0-9]+[.,][0-9]{2})\s*(?:USD|EUR|GBP|INR|RS|dollars?|euros?|pounds?|rupees?)',
+            # Pattern 4: Standalone amounts (decimal format)
+            r'\b([0-9]{1,6}[.,][0-9]{2})\b',
+            # Pattern 5: Total line with equals
+            r'(?:total|amount|sum)\s*[=:]\s*[\$€£₹]?\s*([0-9]+[.,][0-9]{2})',
+        ]
+        
+        detected_amounts = []
+        for pattern in amount_patterns:
+            matches = re.findall(pattern, text, re.IGNORECASE)
+            for match in matches:
+                try:
+                    # Replace comma with period for decimal conversion
+                    amount_str = match.replace(',', '.')
+                    amount_val = float(amount_str)
+                    # Filter out unrealistic amounts (e.g., dates like 01.25)
+                    if 0.01 <= amount_val <= 999999:
+                        detected_amounts.append(amount_val)
+                except (ValueError, AttributeError):
+                    continue
+        
+        # Get the highest amount (likely the total) if multiple amounts found
+        # Or use the first valid amount if only one
+        final_amount = max(detected_amounts) if detected_amounts else None
+        amount_confidence = 0
+        if detected_amounts:
+            # Higher confidence if we found "total" or similar keyword
+            has_total_keyword = bool(re.search(r'(?:total|subtotal|amount|sum)[\s:=]*[\$€£₹]?\s*[0-9]+', text_lower))
+            base_confidence = 90 if has_total_keyword else 75
+            amount_confidence = min(95, base_confidence + len(detected_amounts) * 3)
+        
+        # VENDOR DETECTION (enhanced extraction)
+        vendor_name = ""
+        
+        # Try multiple strategies for vendor name extraction
+        lines = [line.strip() for line in text.split('\n') if line.strip()]
+        
+        # Strategy 1: First non-empty line that looks like a business name
+        for line in lines[:6]:  # Check first few lines
+            # Skip lines that are just numbers or addresses
+            if re.match(r'^[A-Za-z][A-Za-z\s&\'\-\.]{2,40}$', line) and not re.search(r'\d{3,}', line):
+                vendor_name = line[:40]
+                break
+
+        # Strategy 1b: Prefer lines mentioning biryani/briyani/biriyani or royal
+        if not vendor_name:
+            for line in lines[:8]:
+                low = line.lower()
+                if any(k in low for k in ['biryani', 'briyani', 'biriyani', 'royal']):
+                    vendor_name = line[:40]
+                    break
+        
+        # Strategy 2: Look for business name patterns
+        if not vendor_name:
+            name_patterns = [
+                r'(?:from|at|vendor|merchant|store|shop)[\s:]+([A-Za-z][A-Za-z\s&\'\-\.]{2,40})',
+                r'([A-Z][a-z]+(?:\s+[A-Z][a-z]+){1,3})',  # Title case names
+            ]
+            for pattern in name_patterns:
+                match = re.search(pattern, text)
+                if match:
+                    vendor_name = match.group(1).strip()[:40]
+                    break
+        
+        # Strategy 3: Use best-looking early line (longest alpha section) as fallback
+        if not vendor_name and lines:
+            candidates = []
+            for line in lines[:6]:
+                clean = re.sub(r'[^A-Za-z\s&\'\-\.]', '', line)
+                alpha_len = len(re.findall(r'[A-Za-z]', clean))
+                candidates.append((alpha_len, clean.strip()))
+            best = max(candidates, key=lambda x: x[0]) if candidates else None
+            if best and best[0] >= 4:
+                vendor_name = best[1][:40]
+        
+        # CATEGORY DETECTION (food / accommodation / transport / shopping / activities / misc)
+        category_keywords = {
+            # Food & dining: hotels/restaurants/eateries
+            'food': [
+                'restaurant', 'resto', 'dining', 'food', 'eatery', 'biryani', 'briyani', 'baker', 'bakery',
+                'cafe', 'coffee', 'tea', 'snack', 'meal', 'lunch', 'dinner', 'breakfast', 'canteen', 'kitchen',
+                'grill', 'bar', 'pub', 'hotel', 'chicken', 'noodle', 'noodles', 'fried', 'rice', 'egg'
+            ],
+            # Accommodation: lodging/stay/rooms
+            'accommodation': [
+                'lodge', 'lodging', 'stay', 'room', 'rooms', 'resort', 'inn', 'motel', 'guest house',
+                'homestay', 'hostel', 'suite', 'accommodation', 'night', 'bed', 'hotel'
+            ],
+            # Transport: travel tickets/fare/carriers
+            'transport': [
+                'travel', 'travels', 'taxi', 'cab', 'uber', 'lyft', 'ola', 'bus', 'coach', 'train', 'rail',
+                'metro', 'tram', 'ferry', 'flight', 'airline', 'airways', 'boarding', 'fare', 'ticket',
+                'parking', 'toll', 'fuel', 'petrol', 'diesel', 'gas'
+            ],
+            # Shopping: traders/shops/stores/textiles/cloth purchases
+            'shopping': [
+                'trader', 'traders', 'shop', 'shops', 'store', 'stores', 'mart', 'market', 'supermarket',
+                'grocery', 'provision', 'provisions', 'textile', 'textiles', 'cloth', 'clothing', 'garment',
+                'apparel', 'boutique', 'retail', 'outlet', 'purchase', 'purchases', 'electronics', 'hardware'
+            ],
+            # Activities: movies/tourist entries/events
+            'activities': [
+                'movie', 'cinema', 'theater', 'theatre', 'park', 'zoo', 'museum', 'gallery', 'tour', 'tourist',
+                'attraction', 'ticket', 'tickets', 'entry', 'admission', 'show', 'event', 'concert', 'festival',
+                'ride', 'amusement', 'experience'
+            ],
+            # Misc fallback keywords to bias if seen
+            'miscellaneous': ['misc', 'other']
+        }
+        
+        category_scores = {}
+        # Check both full text and vendor name
+        for category, keywords in category_keywords.items():
+            text_score = sum(text_lower.count(kw) for kw in keywords)
+            vendor_score = sum(vendor_name.lower().count(kw) for kw in keywords) * 4 if vendor_name else 0
+            category_scores[category] = text_score + vendor_score
+        
+        # Determine category based on scores
+        max_score = max(category_scores.values()) if category_scores else 0
+        if max_score > 0:
+            detected_category = max(category_scores.items(), key=lambda x: x[1])[0]
+            category_confidence = min(95, 70 + max_score * 8)
+        else:
+            # Default to miscellaneous when nothing matches
+            detected_category = "miscellaneous"
+            category_confidence = 40
+        
+        return {
+            "vendor": vendor_name or "Receipt Item",
+            "amount": round(final_amount, 2) if final_amount else None,
+            "amount_confidence": round(amount_confidence, 1),
+            "category": detected_category,
+            "category_confidence": round(category_confidence, 1),
+            "category_scores": category_scores,
+            "detected_date": detected_date,
+            "text": text
+        }
     
-    detected_amounts = []
-    for pattern in amount_patterns:
-        matches = re.findall(pattern, text_lower)
-        detected_amounts.extend([float(m) for m in matches if m])
-    
-    # Get the highest amount (likely the total)
-    final_amount = max(detected_amounts) if detected_amounts else None
-    amount_confidence = min(95, 85 + len(detected_amounts) * 5) if detected_amounts else 0
-    
-    # VENDOR DETECTION (restaurant/shop name)
-    vendor_keywords = {
-        'restaurant': ['restaurant', 'cafe', 'dining', 'bistro', 'tavern', 'pizzeria', 'diner'],
-        'hotel': ['hotel', 'inn', 'lodge', 'motel', 'resort', 'guest house', 'airbnb'],
-        'shop': ['shop', 'store', 'market', 'supermarket', 'mall', 'retail', 'boutique'],
-        'transport': ['uber', 'taxi', 'bus', 'train', 'flight', 'airline', 'metro'],
-        'attraction': ['museum', 'theater', 'cinema', 'park', 'tour', 'attraction', 'ticket'],
-    }
-    
-    # Try to extract shop/restaurant name (usually at top or after date)
-    vendor_name = ""
-    name_patterns = [
-        r'^[\s\*]*([A-Za-z\s&\-]+?)[\s\*]*\n',  # First line
-        r'(?:receipt from|at|from)\s+([A-Za-z\s&\-]+)',  # After "at" or "from"
-    ]
-    for pattern in name_patterns:
-        match = re.search(pattern, text, re.IGNORECASE)
-        if match:
-            vendor_name = match.group(1).strip()
-            break
-    
-    # CATEGORY DETECTION (food/stay/transport/shopping/activities)
-    category_keywords = {
-        'food': ['restaurant', 'cafe', 'food', 'pizza', 'burger', 'meal', 'lunch', 'dinner', 'breakfast', 'coffee', 'tea', 'snack', 'bakery', 'deli'],
-        'stay': ['hotel', 'motel', 'inn', 'resort', 'lodge', 'airbnb', 'accommodation', 'room', 'bed', 'night'],
-        'transport': ['uber', 'taxi', 'bus', 'train', 'flight', 'airline', 'metro', 'transit', 'transportation', 'ticket', 'fare'],
-        'shopping': ['shop', 'store', 'market', 'mall', 'retail', 'boutique', 'supermarket', 'shopping', 'purchase'],
-        'activities': ['museum', 'theater', 'cinema', 'park', 'tour', 'attraction', 'ticket', 'entrance', 'admission', 'experience'],
-    }
-    
-    category_scores = {}
-    for category, keywords in category_keywords.items():
-        score = sum(text_lower.count(kw) for kw in keywords)
-        category_scores[category] = score
-    
-    detected_category = max(category_scores.items(), key=lambda x: x[1])[0] if max(category_scores.values()) > 0 else "shopping"
-    category_confidence = min(95, 70 + category_scores[detected_category] * 8)
-    
-    return {
-        "vendor": vendor_name or "Receipt",
-        "amount": round(final_amount, 2) if final_amount else None,
-        "amount_confidence": round(amount_confidence, 1),
-        "category": detected_category,
-        "category_confidence": round(category_confidence, 1),
-        "category_scores": category_scores,
-        "text": text
-    }
+    except Exception as e:
+        print(f"[OCR DEBUG] ERROR in extract_receipt_data: {e}")
+        import traceback
+        traceback.print_exc()
+        return {
+            "vendor": "Receipt Item",
+            "amount": None,
+            "amount_confidence": 0,
+            "category": "shopping",
+            "category_confidence": 0,
+            "category_scores": {},
+            "detected_date": None,
+            "text": text
+        }
 
 
 def detect_expense_category(text: str) -> tuple[str, float]:

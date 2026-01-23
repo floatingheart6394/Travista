@@ -200,7 +200,7 @@ def retrieve_context(question: str, k=5):  # Change k from 3 to 5
 # In app/core/openai_client.py
 client.chat.completions.create(
     model="gpt-4o-mini",
-    max_tokens=600,  # Increase from 400
+    max_tokens=2000,  # Increase from 400
     temperature=0.5,  # More focused (was 0.7)
 )
 ```

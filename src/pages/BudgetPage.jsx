@@ -12,8 +12,6 @@ import {
   LineElement,
   PointElement,
 } from "chart.js";
-import { jsPDF } from "jspdf";
-import * as XLSX from "xlsx";
 import { scanReceipt, addExpense as addExpenseAPI } from "../services/budgetService";
 import "../styles/BudgetPage.css";
 
@@ -222,39 +220,49 @@ export default function BudgetPage() {
 
   // Extract expense data from OCR result
   function extractExpenseDataFromReceipt(ocrResult) {
+    console.log("OCR Result received:", ocrResult);
     setOcrResult(ocrResult);
 
-    // Extract amount
-    const text = ocrResult.text || "";
-    const amountMatch = text.match(/[₹$]?\s?(\d+[.,]\d{2})/);
-    const amount = amountMatch ? parseFloat(amountMatch[1].replace(/,/, "")) : "";
+    // Use the structured data returned from the backend API
+    // The backend already extracts vendor, amount, and category with high accuracy
+    const vendor = ocrResult.vendor || "Receipt Item";
+    const amount = ocrResult.amount || "";
+    const category = ocrResult.category || "food";
+    const confidence = ocrResult.amount_confidence || 0;
+    const detectedDate = ocrResult.detected_date;
 
-    // Detect category
-    let detectedCategory = "food";
-    const lowerText = text.toLowerCase();
-
-    if (lowerText.includes("hotel") || lowerText.includes("room") || lowerText.includes("resort")) {
-      detectedCategory = "stay";
-    } else if (lowerText.includes("gas") || lowerText.includes("uber") || lowerText.includes("taxi")) {
-      detectedCategory = "transport";
-    } else if (lowerText.includes("restaurant") || lowerText.includes("cafe") || lowerText.includes("food")) {
-      detectedCategory = "food";
-    } else if (lowerText.includes("mall") || lowerText.includes("shop") || lowerText.includes("store")) {
-      detectedCategory = "shopping";
+    console.log("Extracted data:", { vendor, amount, category, confidence, detectedDate });
+    console.log("Date from OCR:", detectedDate);
+    console.log("Using fallback date:", !detectedDate);
+    
+    // Show warning if date was not detected
+    if (!detectedDate && amount) {
+      console.warn("⚠️ Date not detected from receipt");
     }
 
-    // Extract vendor
-    const vendorMatch = text.match(/^([A-Za-z\s]{3,30})/);
-    const place = vendorMatch ? vendorMatch[1].trim().substring(0, 30) : "Receipt Item";
+    // Map backend categories to frontend category keys
+    const categoryMapping = {
+      "food": "food",
+      "stay": "stay",
+      "transport": "transport",
+      "shopping": "shopping",
+      "activities": "activities",
+      "misc": "misc"
+    };
+
+    const mappedCategory = categoryMapping[category] || "misc";
+
+    // Use detected date if provided, otherwise fall back to today's date
+    const expenseDate = detectedDate || new Date().toISOString().slice(0, 10);
 
     setManualExpense({
-      place,
-      amount: amount.toString(),
-      category: detectedCategory,
-      date: new Date().toISOString().slice(0, 10),
+      place: vendor,
+      amount: amount ? amount.toString() : "",
+      category: mappedCategory,
+      date: expenseDate,
     });
 
-    setScanConfidence(ocrResult.confidence || 0);
+    setScanConfidence(confidence);
   }
 
   // Add expense
@@ -887,7 +895,13 @@ export default function BudgetPage() {
           <div className="modal" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <h3>Confirm Scanned Expense</h3>
-              <button className="modal-close" onClick={() => setShowReceiptModal(false)}>
+              <button className="modal-close" onClick={() => {
+                setShowReceiptModal(false);
+                setScanMessage("");
+                setReceiptFile(null);
+                setReceiptPreview(null);
+                if (fileInputRef.current) fileInputRef.current.value = "";
+              }}>
                 ✕
               </button>
             </div>
@@ -928,13 +942,20 @@ export default function BudgetPage() {
                 </select>
               </div>
               <div className="data-row">
-                <label>Date:</label>
+                <label>Date: {!ocrResult?.detected_date && "⚠️"}</label>
                 <input
                   type="date"
                   value={manualExpense.date}
                   onChange={(e) => setManualExpense({ ...manualExpense, date: e.target.value })}
+                  title={!ocrResult?.detected_date ? "Date not detected - please verify" : ""}
+                  style={!ocrResult?.detected_date ? { borderColor: "#ff9800", borderWidth: "2px" } : {}}
                 />
               </div>
+              {!ocrResult?.detected_date && manualExpense.date && (
+                <div style={{ fontSize: "12px", color: "#ff9800", marginTop: "-10px", marginBottom: "10px" }}>
+                  ⚠️ Date not found on receipt
+                </div>
+              )}
               {scanConfidence > 0 && (
                 <div className="confidence-indicator">
                   Confidence:
@@ -953,7 +974,13 @@ export default function BudgetPage() {
               <button className="btn-confirm" onClick={addExpense}>
                 ✓ Confirm & Save
               </button>
-              <button className="btn-cancel" onClick={() => setShowReceiptModal(false)}>
+              <button className="btn-cancel" onClick={() => {
+                setShowReceiptModal(false);
+                setScanMessage("");
+                setReceiptFile(null);
+                setReceiptPreview(null);
+                if (fileInputRef.current) fileInputRef.current.value = "";
+              }}>
                 ✕ Cancel
               </button>
             </div>

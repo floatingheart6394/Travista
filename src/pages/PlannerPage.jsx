@@ -84,13 +84,29 @@ function ItineraryDisplay({ itinerary }) {
       
       let rawContent = text.substring(contentStart, contentEnd).trim();
       
-      // Clean up the content
+      // Clean up the content - remove markdown artifacts and AI garbage
       let content = rawContent
-        .replace(/^\s*[:;]\s*/gm, '')
-        .replace(/\*\*(.+?)\*\*/g, '$1')
-        .replace(/\*(.+?)\*/g, '$1')
-        .replace(/^[-•]\s+/gm, '')
-        .replace(/^"(.+)"$/gm, '$1')
+        .replace(/^\s*[:;]\s*/gm, '')                                  // Remove leading colons/semicolons
+        .replace(/\*\*(.+?)\*\*/g, '$1')                               // Remove **bold**
+        .replace(/\*(.+?)\*/g, '$1')                                   // Remove *italic*
+        .replace(/^[-•]\s+/gm, '')                                     // Remove bullet points
+        .replace(/^"(.+)"$/gm, '$1')                                   // Remove quotes
+        .replace(/^-{3,}$/gm, '')                                      // Remove horizontal rules (---, ----, etc)
+        .replace(/^\*{3,}$/gm, '')                                     // Remove *** separators
+        .replace(/^\*+$/gm, '')                                        // Remove standalone asterisks
+        .replace(/^_+$/gm, '')                                         // Remove underscore separators
+        .replace(/^#{1,6}\s+/gm, '')                                   // Remove markdown headings (# ## ### etc)
+        .replace(/^Location:\s*[\d\s,]+$/gm, '')                       // Remove "Location: 100, 101, 102..." pattern
+        .replace(/^\d{1,3}(?:\s*,\s*\d{1,3})+\s*$/gm, '')             // Remove comma-separated number sequences
+        .split('\n')                                                   // Split into lines
+        .map(line => line
+          .replace(/\*+/g, '')                                         // Remove asterisks
+          .replace(/#+/g, '')                                          // Remove hash symbols
+          .replace(/^[\d\s,]+$/, '')                                   // Remove lines with only numbers/commas
+          .trim()
+        )
+        .filter(line => line.length > 0)                              // Remove empty lines
+        .join('\n')                                                    // Rejoin
         .trim();
       
       // Split content into sections
@@ -109,7 +125,10 @@ function ItineraryDisplay({ itinerary }) {
           if (currentSection && currentSection.items.length > 0) {
             sections.push(currentSection);
           }
-          const title = trimmed.replace(/[:;]\s*$/, '');
+          const title = trimmed
+            .replace(/[:;]\s*$/, '')
+            .replace(/\*+/g, '')  // Remove asterisks from title
+            .trim();
           currentSection = { 
             title: title.charAt(0).toUpperCase() + title.slice(1),
             items: [] 
@@ -121,7 +140,17 @@ function ItineraryDisplay({ itinerary }) {
               items: [] 
             };
           }
-          currentSection.items.push(trimmed);
+          // Clean item text: remove markdown, dashes, numbers, etc.
+          const cleanedItem = trimmed
+            .replace(/\*+/g, '')           // Remove asterisks
+            .replace(/#+/g, '')            // Remove hash symbols
+            .replace(/^-+\s*/, '')         // Remove leading dashes
+            .replace(/\s*-+\s*$/, '')      // Remove trailing dashes
+            .trim();
+          // Skip lines that are just numbers or special artifacts
+          if (cleanedItem && !/^[\d\s,]+$/.test(cleanedItem)) {
+            currentSection.items.push(cleanedItem);
+          }
         }
       });
       

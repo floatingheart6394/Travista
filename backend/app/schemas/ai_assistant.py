@@ -65,4 +65,5 @@ class ReceiptScanResponse(BaseModel):
     category: str  # Suggested category (food, stay, transport, shopping, activities)
     category_confidence: float  # 0-100 confidence in category
     category_scores: Dict[str, int]  # Scores for each category
+    detected_date: Optional[str] = None  # ISO date (YYYY-MM-DD) if found
     error: Optional[str] = None
