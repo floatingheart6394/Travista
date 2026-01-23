@@ -29,15 +29,15 @@ portalImage.src = './img/fireball.png'
 
 const portal = new Portal({
   position: {
-    x: 200,  // Adjust position to place portal in your world
-    y: 300   // Place near spawn or accessible area
+    x: 1800,  // Adjust position to place portal in your world
+    y: 70   // Place near spawn or accessible area
   },
   image: portalImage,
   frames: {
     max: 4,
-    hold: 15
+    hold: 30
   },
-  scale: 3,
+  scale: 2,
   targetUrl: '/game/pygame/build/web/index.html'
 })
 
