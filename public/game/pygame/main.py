@@ -518,9 +518,9 @@ def handle_move(player , objects):
     collide_left = collide(player , objects , -PLAYER_VEL * 2)
     collide_right = collide(player , objects , PLAYER_VEL * 2)
 
-    if keys[pygame.K_LEFT] and not collide_left:
+    if (keys[pygame.K_LEFT] or keys[pygame.K_a]) and not collide_left:
         player.move_left(PLAYER_VEL)
-    if keys[pygame.K_RIGHT] and not collide_right:
+    if (keys[pygame.K_RIGHT] or keys[pygame.K_d]) and not collide_right:
         player.move_right(PLAYER_VEL)
 
     vertical_collide = handle_vertical_collision(player , objects , player.y_vel)

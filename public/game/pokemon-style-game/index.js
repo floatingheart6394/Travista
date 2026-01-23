@@ -30,8 +30,8 @@ console.log(charactersMap)
 // PORTAL SETUP - Gateway to Pygame World
 // ===============================================
 const portalImage = new Image()
-// Using fireball as placeholder - replace with actual portal sprite
-portalImage.src = './img/fireball.png'
+// Using Dimensional Portal sprite
+portalImage.src = './img/Dimensional_Portal.png'
 
 const portal = new Portal({
   position: {
@@ -40,10 +40,12 @@ const portal = new Portal({
   },
   image: portalImage,
   frames: {
-    max: 4,
-    hold: 30
+    max: 6,
+    hold: 10
   },
-  scale: 2,
+  scale: 4,
+  cols: 3,
+  rows: 2,
   targetUrl: '/game/pygame/build/web/index.html'
 })
 
@@ -163,8 +165,8 @@ playerRightImage.src = './img/playerRight.png'
 
 const player = new Sprite({
   position: {
-    x: canvas.width / 2 - 192 / 4 / 2,
-    y: canvas.height / 2 - 68 / 2
+    x: canvas.width / 4  ,
+    y: canvas.height / 4 
   },
   image: playerDownImage,
   frames: {

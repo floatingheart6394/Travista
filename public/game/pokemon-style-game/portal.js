@@ -31,7 +31,9 @@ class Portal extends Sprite {
     image,
     frames = { max: 1, hold: 10 },
     scale = 2,
-    targetUrl = '/game/pygame/build/web/index.html'
+    targetUrl = '/game/pygame/build/web/index.html',
+    cols = 3,
+    rows = 2
   }) {
     super({
       position,
@@ -45,11 +47,72 @@ class Portal extends Sprite {
     this.isActivated = false
     this.glowIntensity = 0
     this.glowDirection = 1
+    this.cols = cols
+    this.rows = rows
   }
 
   draw() {
-    // Draw portal sprite
-    super.draw()
+    // Draw portal sprite with grid layout
+    c.save()
+    c.translate(
+      this.position.x + this.width / 2,
+      this.position.y + this.height / 2
+    )
+    c.rotate(this.rotation)
+    c.translate(
+      -this.position.x - this.width / 2,
+      -this.position.y - this.height / 2
+    )
+    c.globalAlpha = this.opacity
+
+    // Calculate frame position in grid
+    const frameWidth = this.image.width / this.cols
+    const frameHeight = this.image.height / this.rows
+    const col = this.frames.val % this.cols
+    const row = Math.floor(this.frames.val / this.cols)
+
+    const crop = {
+      position: {
+        x: col * frameWidth,
+        y: row * frameHeight
+      },
+      width: frameWidth,
+      height: frameHeight
+    }
+
+    const image = {
+      position: {
+        x: this.position.x,
+        y: this.position.y
+      },
+      width: frameWidth,
+      height: frameHeight
+    }
+
+    c.drawImage(
+      this.image,
+      crop.position.x,
+      crop.position.y,
+      crop.width,
+      crop.height,
+      image.position.x,
+      image.position.y,
+      crop.width * this.scale,
+      crop.height * this.scale
+    )
+
+    c.restore()
+
+    if (!this.animate) return
+
+    if (this.frames.max > 1) {
+      this.frames.elapsed++
+    }
+
+    if (this.frames.elapsed % this.frames.hold === 0) {
+      if (this.frames.val < this.frames.max - 1) this.frames.val++
+      else this.frames.val = 0
+    }
   }
 
   /**
