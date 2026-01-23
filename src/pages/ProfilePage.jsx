@@ -112,6 +112,7 @@ export default function ProfilePage() {
   const mainRef = useRef(null);
 
   const [isSignoutOpen, setIsSignoutOpen] = useState(false);
+  const [errorModal, setErrorModal] = useState({ open: false, message: "" });
 
   const [activePanel, setActivePanel] = useState(null);
 
@@ -120,13 +121,15 @@ export default function ProfilePage() {
 
   // Display name shown in header (updates only after save)
   const [displayName, setDisplayName] = useState(
-    String(initialProfile.fullName || "").trim() || "Alex Thompson"
+    String(initialProfile.fullName || "").trim() || ""
   );
 
   const [fullName, setFullName] = useState(initialProfile.fullName);
   const [username, setUsername] = useState(initialProfile.username);
   const [bio, setBio] = useState(initialProfile.bio);
-  const [photoDataUrl, setPhotoDataUrl] = useState(initialProfile.photoDataUrl);
+  // Saved vs draft photo: saved drives header/sidebar, draft shows in editor until saved
+  const [photoSavedUrl, setPhotoSavedUrl] = useState(initialProfile.photoDataUrl);
+  const [photoDraftUrl, setPhotoDraftUrl] = useState(initialProfile.photoDataUrl);
 
   const [currentCity, setCurrentCity] = useState(initialProfile.currentCity);
   const [country, setCountry] = useState(initialProfile.country);
@@ -166,10 +169,11 @@ export default function ProfilePage() {
         const data = await fetchProfile();
         if (!mounted) return;
         setFullName(data.name || "");
-        setDisplayName(data.name || "Alex Thompson");
+        setDisplayName(data.name || "");
         setEmail(data.email || "");
         if (data.profile_image_url) {
-          setPhotoDataUrl(data.profile_image_url);
+          setPhotoSavedUrl(data.profile_image_url);
+          setPhotoDraftUrl(data.profile_image_url);
         }
       } catch (err) {
         console.error("Failed to load profile", err);
@@ -180,7 +184,7 @@ export default function ProfilePage() {
     };
   }, []);
 
-  const name = String(displayName || "").trim() || "Alex Thompson";
+  const name = String(displayName || "").trim() || "";
 
   useEffect(() => {
     if (!isProfileSaved) return;
@@ -226,7 +230,7 @@ export default function ProfilePage() {
     const reader = new FileReader();
     reader.onload = () => {
       const result = String(reader.result || "");
-      setPhotoDataUrl(result);
+      setPhotoDraftUrl(result);
     };
     reader.readAsDataURL(file);
   };
@@ -236,7 +240,7 @@ export default function ProfilePage() {
       fullName: String(fullName || "").trim(),
       username: String(username || "").trim(),
       bio: String(bio || "").trim(),
-      photoDataUrl: photoDataUrl || "",
+      photoDataUrl: photoDraftUrl || "",
 
       currentCity: String(currentCity || "").trim(),
       country: String(country || "").trim(),
@@ -251,14 +255,19 @@ export default function ProfilePage() {
       await updateProfile({
         name: payload.fullName,
         email: email || "",
-        profile_image_url: photoDataUrl || null,
+        profile_image_url: photoDraftUrl || null,
       });
-      setDisplayName(payload.fullName || "Alex Thompson");
+      setDisplayName(payload.fullName || "");
+      setPhotoSavedUrl(photoDraftUrl || "");
+      setPhotoDraftUrl(photoDraftUrl || "");
       setIsProfileSaved(true);
+      
+      // Notify navbar to refresh
+      window.dispatchEvent(new Event("profileUpdated"));
     } catch (err) {
       console.error("Profile update failed", err);
       setIsProfileSaved(false);
-      alert(err.message || "Failed to save profile");
+      setErrorModal({ open: true, message: err.message || "Failed to save profile" });
     }
   };
 
@@ -285,14 +294,17 @@ export default function ProfilePage() {
       await updateProfile({
         name: fullName || "",
         email: payload.email,
-        profile_image_url: photoDataUrl || null,
+        profile_image_url: photoSavedUrl || null,
       });
-      setDisplayName(fullName || "Alex Thompson");
+      setDisplayName(fullName || "");
       setIsDetailsSaved(true);
+      
+      // Notify navbar to refresh
+      window.dispatchEvent(new Event("profileUpdated"));
     } catch (err) {
       console.error("Details update failed", err);
       setIsDetailsSaved(false);
-      alert(err.message || "Failed to save details");
+      setErrorModal({ open: true, message: err.message || "Failed to save details" });
     }
   };
 
@@ -360,10 +372,10 @@ export default function ProfilePage() {
       onClick: () => openPanel("details"),
     },
     {
-      key: "download",
-      title: "Download Report",
+      key: "pasttrips",
+      title: "Past Trip Records",
       icon: <FiDownload />,
-      onClick: () => openPanel("download"),
+      onClick: () => navigate("/past-trips"),
     },
     {
       key: "backup",
@@ -398,10 +410,39 @@ export default function ProfilePage() {
       <main className="dashboard-content profile2-content">
         <div className="profile2-layout">
           <aside className="profile2-sidebar">
-            <section className="profile2-card profile2-photoCard">
+            <section className="profile2-card profile2-photoCard" style={{ padding: '1rem', background: 'transparent', boxShadow: 'none' }}>
               <div className="profile-identity">
-                <div className="profile-identityAvatar" aria-hidden="true">
-                  {initialsFromName(name)}
+                <div 
+                  className="profile-identityAvatar" 
+                  style={{ 
+                    width: '56px', 
+                    height: '56px', 
+                    borderRadius: '50%',
+                    border: '3px solid #FF9500',
+                    overflow: 'hidden',
+                    flexShrink: 0,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    backgroundColor: '#f0f0f0',
+                    boxShadow: 'none'
+                  }} 
+                  aria-hidden="true"
+                >
+                  {photoSavedUrl ? (
+                    <img 
+                      src={photoSavedUrl} 
+                      alt="Profile" 
+                      style={{ 
+                        width: '100%', 
+                        height: '100%', 
+                        objectFit: 'cover',
+                        display: 'block'
+                      }} 
+                    />
+                  ) : (
+                    initialsFromName(name)
+                  )}
                 </div>
                 <div className="profile-identityTexts">
                   <div className="profile-identityName">{name}</div>
@@ -477,8 +518,8 @@ export default function ProfilePage() {
                 <aside className="account-left">
                   <section className="profile2-card account-photoCard">
                     <div className="account-photoArea">
-                      {photoDataUrl ? (
-                        <img className="account-photoImg" alt="Profile" src={photoDataUrl} />
+                      {photoDraftUrl ? (
+                        <img className="account-photoImg" alt="Profile" src={photoDraftUrl} />
                       ) : (
                         <div className="account-photoFallback" aria-hidden="true">
                           {initialsFromName(name)}
@@ -490,7 +531,7 @@ export default function ProfilePage() {
                   <section className="profile2-card account-uploadCard">
                     <label className="account-uploadBtn">
                       <FiCamera />
-                      <span>{photoDataUrl ? "Change Photo" : "Upload Photo"}</span>
+                      <span>{photoDraftUrl ? "Change Photo" : "Upload Photo"}</span>
                       <input
                         type="file"
                         accept="image/*"
@@ -615,13 +656,6 @@ export default function ProfilePage() {
                   </div>
 
                   <div className="account-actionsRow">
-                    <button
-                      className="account-save secondary"
-                      type="button"
-                      onClick={() => setActivePanel(null)}
-                    >
-                      Done
-                    </button>
                     <button className="account-save" type="button" onClick={onSaveProfile}>
                       <FiSave />
                       <span>{isProfileSaved ? "Saved" : "Save Changes"}</span>
@@ -748,13 +782,6 @@ export default function ProfilePage() {
                 </div>
 
                 <div className="account-actionsRow">
-                  <button
-                    className="account-save secondary"
-                    type="button"
-                    onClick={() => setActivePanel(null)}
-                  >
-                    Done
-                  </button>
                   <button className="account-save" type="button" onClick={onSaveDetails}>
                     <FiSave />
                     <span>{isDetailsSaved ? "Saved" : "Save Changes"}</span>
@@ -804,6 +831,34 @@ export default function ProfilePage() {
                 }}
               >
                 Sign out
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {errorModal.open && (
+        <div className="modal-overlay" onClick={() => setErrorModal({ open: false, message: "" })}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3>Error</h3>
+              <button
+                className="modal-close"
+                onClick={() => setErrorModal({ open: false, message: "" })}
+                aria-label="Close"
+              >
+                ×
+              </button>
+            </div>
+            <div className="modal-body">
+              <p>{errorModal.message}</p>
+            </div>
+            <div className="modal-footer">
+              <button
+                className="modal-btn"
+                onClick={() => setErrorModal({ open: false, message: "" })}
+              >
+                OK
               </button>
             </div>
           </div>

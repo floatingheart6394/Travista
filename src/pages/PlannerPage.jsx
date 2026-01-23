@@ -20,6 +20,7 @@ const STYLES = [
   "History",
 ];
 const API_URL = import.meta.env.VITE_API_BASE_URL;
+const PLANNER_CACHE_KEY = "travista.planner.cache";
 
 // Itinerary Display Component
 function ItineraryDisplay({ itinerary }) {
@@ -217,6 +218,64 @@ export default function PlannerPage() {
   const [loading, setLoading] = useState(false);
   const [itinerary, setItinerary] = useState("");
   const [error, setError] = useState("");
+  const [hasLoadedCache, setHasLoadedCache] = useState(false);
+
+  // Load cached planner data unless trip end date has passed
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(PLANNER_CACHE_KEY);
+      if (!raw) {
+        setHasLoadedCache(true);
+        return;
+      }
+      const cached = JSON.parse(raw);
+      if (cached?.endDate) {
+        const tripEnd = new Date(cached.endDate);
+        const todayMidnight = new Date();
+        todayMidnight.setHours(0, 0, 0, 0);
+        // Clear cache if trip is over
+        if (tripEnd < todayMidnight) {
+          localStorage.removeItem(PLANNER_CACHE_KEY);
+          setHasLoadedCache(true);
+          return;
+        }
+      }
+      setDestination(cached.destination || "");
+      setStartDate(cached.startDate || "");
+      setEndDate(cached.endDate || "");
+      setDuration(cached.duration || "");
+      setBudget(cached.budget || "");
+      setTravelers(cached.travelers || "");
+      setTripStyles(cached.tripStyles || []);
+      setItinerary(cached.itinerary || "");
+      setHasLoadedCache(true);
+    } catch (e) {
+      console.error("Failed to load planner cache", e);
+      setHasLoadedCache(true);
+    }
+  }, []);
+
+  // Persist planner data on change (only after initial load)
+  useEffect(() => {
+    if (!hasLoadedCache) return;
+    
+    const payload = {
+      destination,
+      startDate,
+      endDate,
+      duration,
+      budget,
+      travelers,
+      tripStyles,
+      itinerary,
+      savedAt: new Date().toISOString(),
+    };
+    try {
+      localStorage.setItem(PLANNER_CACHE_KEY, JSON.stringify(payload));
+    } catch (e) {
+      console.error("Failed to save planner cache", e);
+    }
+  }, [hasLoadedCache, destination, startDate, endDate, duration, budget, travelers, tripStyles, itinerary]);
 
  /* useEffect(() => {
     async function loadTrip() {
@@ -355,6 +414,23 @@ FINAL CHECK: Before you finish, verify you have provided content for Day 1 throu
 
       const data = await res.json();
       setItinerary(data.reply);
+
+      // Save itinerary to backend
+      try {
+        await fetch(`${API_URL}/trip/`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${localStorage.getItem("access_token")}`,
+          },
+          body: JSON.stringify({
+            ...payload,
+            itinerary: data.reply,
+          }),
+        });
+      } catch (err) {
+        console.error("Failed to save itinerary:", err);
+      }
     } catch (err) {
       console.error(err);
       setError("⚠️ Unable to generate itinerary. Please try again.");

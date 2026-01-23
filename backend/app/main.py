@@ -29,13 +29,16 @@ async def startup():
         # Lightweight schema patching for dev: ensure trip dates exist even if tables already created
         await conn.execute(text("ALTER TABLE IF EXISTS trip.trips ADD COLUMN IF NOT EXISTS start_date DATE"))
         await conn.execute(text("ALTER TABLE IF EXISTS trip.trips ADD COLUMN IF NOT EXISTS end_date DATE"))
+        await conn.execute(text("ALTER TABLE IF EXISTS trip.trips ADD COLUMN IF NOT EXISTS itinerary TEXT"))
+        # Allow full data URLs for profile pictures
+        await conn.execute(text("ALTER TABLE IF EXISTS auth.profile_pictures ALTER COLUMN image_url TYPE TEXT"))
     if os.getenv("ENABLE_RAG", "true").lower() == "true":
         try:
             initialize_rag("app/rag/data")
         except Exception as e:
-            print(f"⚠ RAG initialization skipped: {e}")
+            print(f"[warn] RAG initialization skipped: {e}")
     else:
-        print("ℹ RAG initialization disabled via ENABLE_RAG=false")
+        print("[info] RAG initialization disabled via ENABLE_RAG=false")
 
 app.include_router(auth.router)
 app.include_router(users.router)

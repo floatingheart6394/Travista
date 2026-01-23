@@ -4,6 +4,9 @@ import {FiPlus, FiTrash2, FiCheck, FiFilter, FiClipboard, FiStar,} from "react-i
 import { FaStar } from "react-icons/fa";
 import {fetchTodos,createTodo, updateTodo, deleteTodo,} from "../services/todoService";
 
+const TODO_CACHE_KEY = "travista.todo.cache";
+const PLANNER_CACHE_KEY = "travista.planner.cache";
+
 export default function TodoPage() {
   const [items, setItems] = useState([]);
   const [filter, setFilter] = useState("all");
@@ -18,23 +21,79 @@ export default function TodoPage() {
   const [mCategory, setMCategory] = useState("Other");
   const [side, setSide] = useState("All tasks");
 
+  const isTripActive = () => {
+    try {
+      const raw = localStorage.getItem(PLANNER_CACHE_KEY);
+      if (!raw) return true; // keep if no planner
+      const cached = JSON.parse(raw);
+      if (!cached.endDate) return true;
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const tripEnd = new Date(cached.endDate);
+      return tripEnd >= today;
+    } catch (e) {
+      console.error("Failed to read planner cache for todo expiration", e);
+      return true;
+    }
+  };
+
+  const loadCachedTodos = () => {
+    try {
+      const raw = localStorage.getItem(TODO_CACHE_KEY);
+      if (!raw) return null;
+      const cached = JSON.parse(raw);
+      if (!isTripActive()) {
+        localStorage.removeItem(TODO_CACHE_KEY);
+        return null;
+      }
+      return cached.items || [];
+    } catch (e) {
+      console.error("Failed to load cached todos", e);
+      return null;
+    }
+  };
+
+  const persistTodos = (arr) => {
+    try {
+      localStorage.setItem(
+        TODO_CACHE_KEY,
+        JSON.stringify({ items: arr, savedAt: new Date().toISOString() })
+      );
+    } catch (e) {
+      console.error("Failed to cache todos", e);
+    }
+  };
+
   const loadTodos = async () => {
-    const data = await fetchTodos();
+    // Optimistically show cached todos if any
+    const cached = loadCachedTodos();
+    if (cached) setItems(cached);
 
-    const mapped = data.map((t) => ({
-      id: t.id,
-      text: t.title,
-      desc: t.description,
-      category: t.category,
-      group: t.group,
-      priority: t.priority,
-      due: t.due_at,
-      remindAt: t.remind_at,
-      done: t.is_done,
-      important: t.is_important,
-    }));
+    try {
+      const data = await fetchTodos();
 
-    setItems(mapped);
+      const mapped = data.map((t) => ({
+        id: t.id,
+        text: t.title,
+        desc: t.description,
+        category: t.category,
+        group: t.group,
+        priority: t.priority,
+        due: t.due_at,
+        remindAt: t.remind_at,
+        done: t.is_done,
+        important: t.is_important,
+      }));
+
+      setItems(mapped);
+      persistTodos(mapped);
+    } catch (err) {
+      console.error("Failed to load todos", err);
+      // Fall back to cache if fetch fails
+      if (cached) {
+        setItems(cached);
+      }
+    }
   };
 
 

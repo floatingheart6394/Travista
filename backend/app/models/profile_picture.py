@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, text
+from sqlalchemy import Column, Integer, DateTime, ForeignKey, Text, text
 from app.database import Base
 
 class ProfilePicture(Base):
@@ -7,5 +7,6 @@ class ProfilePicture(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("auth.users.id", ondelete="CASCADE"), nullable=False, index=True)
-    image_url = Column(String(500), nullable=False)
+    # Store full data URLs; base64 strings exceed 500 chars
+    image_url = Column(Text, nullable=False)
     created_at = Column(DateTime, server_default=text("CURRENT_TIMESTAMP"))

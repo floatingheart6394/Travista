@@ -21,7 +21,7 @@ def initialize_vector_store(data_dir: str = "backend/app/rag/data") -> None:
     
     documents = load_documents(data_dir)
     if not documents:
-        print(f"⚠ Warning: No documents found in {data_dir}")
+        print(f"[warn] No documents found in {data_dir}")
         # Create a dummy vector store with default content
         documents = ["Travista is a travel planning application"]
     
@@ -37,7 +37,7 @@ def initialize_vector_store(data_dir: str = "backend/app/rag/data") -> None:
         documents=doc_objects,
         embedding=embedder
     )
-    print(f"✓ Vector store initialized with {len(doc_objects)} documents")
+    print(f"[info] Vector store initialized with {len(doc_objects)} documents")
 
 def get_vector_store():
     global _vector_store

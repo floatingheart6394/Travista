@@ -1,4 +1,4 @@
-from sqlalchemy import Column, String, Integer, Numeric, ForeignKey, Date
+from sqlalchemy import Column, String, Integer, Numeric, ForeignKey, Date, Text
 from sqlalchemy.dialects.postgresql import ARRAY
 from sqlalchemy.sql import func
 from sqlalchemy.types import DateTime
@@ -24,5 +24,6 @@ class Trip(Base):
     trip_styles = Column(ARRAY(String), default=[])
     start_date = Column(Date, nullable=True)
     end_date = Column(Date, nullable=True)
+    itinerary = Column(Text, nullable=True)
 
     created_at = Column(DateTime(timezone=True), server_default=func.now())
