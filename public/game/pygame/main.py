@@ -13,7 +13,7 @@ pygame.init()
 pygame.display.set_caption("Pixel Adventure")
 
 WIDTH, HEIGHT = 1200 , 800
-FPS = 60
+FPS = 120
 PLAYER_VEL = 5
 SCORE = 0
 x_spawn = 32 

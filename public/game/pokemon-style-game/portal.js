@@ -8,6 +8,22 @@
 // Global animation ID for pausing/resuming
 let pokemonGameAnimationId = null;
 let isPokemonGamePaused = false;
+let originalAlert = typeof window !== 'undefined' ? window.alert : null;
+
+function clearBeforeUnload(iframe) {
+  try {
+    if (iframe && iframe.contentWindow) {
+      iframe.contentWindow.onbeforeunload = null
+    }
+  } catch (e) {
+    /* ignore cross-origin protection */
+  }
+  try {
+    window.onbeforeunload = null
+  } catch (e) {
+    /* ignore */
+  }
+}
 
 class Portal extends Sprite {
   constructor({
@@ -125,6 +141,17 @@ function openPygamePortal(gameUrl) {
   // Pause Pokemon game
   isPokemonGamePaused = true
 
+  // Suppress any alert popups from the embedded game
+  if (originalAlert) {
+    window.alert = () => {}
+  }
+
+  // Ensure no beforeunload prompt lingers
+  clearBeforeUnload(iframe)
+
+  // Also clear once the iframe loads
+  iframe.addEventListener('load', () => clearBeforeUnload(iframe), { once: true })
+
   // Load pygame game in iframe
   iframe.src = gameUrl
   
@@ -156,9 +183,17 @@ function closePygamePortal() {
   
   // Unload iframe (stops pygame game)
   iframe.src = 'about:blank'
+
+  // Remove beforeunload prompts
+  clearBeforeUnload(iframe)
   
   // Resume Pokemon game
   isPokemonGamePaused = false
+
+   // Restore alert if it was suppressed
+  if (originalAlert) {
+    window.alert = originalAlert
+  }
   
   console.log('✅ Pygame overlay closed, Pokemon game resumed')
 }
