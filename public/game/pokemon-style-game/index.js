@@ -1,8 +1,14 @@
 const canvas = document.querySelector('canvas')
 const c = canvas.getContext('2d')
 
-canvas.width = 1024
-canvas.height = 576
+canvas.width = window.innerWidth
+canvas.height = window.innerHeight
+
+// Resize canvas on window resize 
+window.addEventListener('resize', () => {
+  canvas.width = window.innerWidth
+  canvas.height = window.innerHeight
+})
 
 const collisionsMap = []
 for (let i = 0; i < collisions.length; i += 70) {
@@ -19,6 +25,29 @@ for (let i = 0; i < charactersMapData.length; i += 70) {
   charactersMap.push(charactersMapData.slice(i, 70 + i))
 }
 console.log(charactersMap)
+
+// ===============================================
+// PORTAL SETUP - Gateway to Pygame World
+// ===============================================
+const portalImage = new Image()
+// Using Dimensional Portal sprite
+portalImage.src = './img/Dimensional_Portal.png'
+
+const portal = new Portal({
+  position: {
+    x: 1800,  // Adjust position to place portal in your world
+    y: 70   // Place near spawn or accessible area
+  },
+  image: portalImage,
+  frames: {
+    max: 6,
+    hold: 10
+  },
+  scale: 4,
+  cols: 3,
+  rows: 2,
+  targetUrl: '/game/pygame/build/web/index.html'
+})
 
 const boundaries = []
 const offset = {
@@ -137,7 +166,7 @@ playerRightImage.src = './img/playerRight.png'
 const player = new Sprite({
   position: {
     x: canvas.width / 2 - 192 / 4 / 2,
-    y: canvas.height / 2 - 68 / 2
+    y: canvas.height / 2 - 68 / 2 
   },
   image: playerDownImage,
   frames: {
@@ -188,7 +217,8 @@ const movables = [
   ...boundaries,
   foreground,
   ...battleZones,
-  ...characters
+  ...characters,
+  portal  // Portal moves with the world
 ]
 const renderables = [
   background,
@@ -196,6 +226,7 @@ const renderables = [
   ...battleZones,
   ...characters,
   player,
+  portal,  // Portal renders above player
   foreground
 ]
 
@@ -205,6 +236,12 @@ const battle = {
 
 function animate() {
   const animationId = window.requestAnimationFrame(animate)
+  
+  // PAUSE CHECK: Don't update game if pygame overlay is active
+  if (!isPokemonGameActive()) {
+    return
+  }
+  
   renderables.forEach((renderable) => {
     renderable.draw()
   })
@@ -213,6 +250,12 @@ function animate() {
   player.animate = false
 
   if (battle.initiated) return
+
+  // ===============================================
+  // PORTAL COLLISION CHECK
+  // ===============================================
+  const playerNearPortal = checkPortalCollision({ player, portal })
+  showPortalPrompt(playerNearPortal)
 
   // activate a battle
   if (keys.w.pressed || keys.a.pressed || keys.s.pressed || keys.d.pressed) {
@@ -235,7 +278,7 @@ function animate() {
           rectangle2: battleZone
         }) &&
         overlappingArea > (player.width * player.height) / 2 &&
-        Math.random() < 0.01
+        Math.random() < 0.25
       ) {
         // deactivate current animation loop
         window.cancelAnimationFrame(animationId)
@@ -302,7 +345,7 @@ function animate() {
 
     if (moving)
       movables.forEach((movable) => {
-        movable.position.y += 3
+        movable.position.y += 5
       })
   } else if (keys.a.pressed && lastKey === 'a') {
     player.animate = true
@@ -335,7 +378,7 @@ function animate() {
 
     if (moving)
       movables.forEach((movable) => {
-        movable.position.x += 3
+        movable.position.x += 5
       })
   } else if (keys.s.pressed && lastKey === 's') {
     player.animate = true
@@ -368,7 +411,7 @@ function animate() {
 
     if (moving)
       movables.forEach((movable) => {
-        movable.position.y -= 3
+        movable.position.y -= 5
       })
   } else if (keys.d.pressed && lastKey === 'd') {
     player.animate = true
@@ -401,7 +444,7 @@ function animate() {
 
     if (moving)
       movables.forEach((movable) => {
-        movable.position.x -= 3
+        movable.position.x -= 5
       })
   }
 }
@@ -440,6 +483,19 @@ window.addEventListener('keydown', (e) => {
       document.querySelector('#characterDialogueBox').innerHTML = firstMessage
       document.querySelector('#characterDialogueBox').style.display = 'flex'
       player.isInteracting = true
+      break
+    case 'e':
+    case 'E':
+      // ===============================================
+      // PORTAL ACTIVATION (Press E near portal)
+      // ===============================================
+      const nearPortal = checkPortalCollision({ player, portal })
+      if (nearPortal) {
+        portal.activate({
+          playerName: 'Traveler',
+          score: 0
+        })
+      }
       break
     case 'w':
       keys.w.pressed = true
