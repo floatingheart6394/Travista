@@ -48,26 +48,6 @@ class Portal extends Sprite {
   }
 
   draw() {
-    // Draw glowing effect behind portal
-    c.save()
-    c.globalAlpha = this.glowIntensity
-    c.fillStyle = '#00ffff'
-    c.beginPath()
-    c.arc(
-      this.position.x + this.width / 2,
-      this.position.y + this.height / 2,
-      this.width * 0.6,
-      0,
-      Math.PI * 2
-    )
-    c.fill()
-    c.restore()
-
-    // Update glow animation
-    this.glowIntensity += 0.01 * this.glowDirection
-    if (this.glowIntensity >= 0.5) this.glowDirection = -1
-    if (this.glowIntensity <= 0.2) this.glowDirection = 1
-
     // Draw portal sprite
     super.draw()
   }
