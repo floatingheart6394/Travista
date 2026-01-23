@@ -165,8 +165,8 @@ playerRightImage.src = './img/playerRight.png'
 
 const player = new Sprite({
   position: {
-    x: canvas.width / 4  ,
-    y: canvas.height / 4 
+    x: canvas.width / 2 - 192 / 4 / 2,
+    y: canvas.height / 2 - 68 / 2 
   },
   image: playerDownImage,
   frames: {
@@ -278,7 +278,7 @@ function animate() {
           rectangle2: battleZone
         }) &&
         overlappingArea > (player.width * player.height) / 2 &&
-        Math.random() < 0.01
+        Math.random() < 0.5
       ) {
         // deactivate current animation loop
         window.cancelAnimationFrame(animationId)
@@ -345,7 +345,7 @@ function animate() {
 
     if (moving)
       movables.forEach((movable) => {
-        movable.position.y += 3
+        movable.position.y += 5
       })
   } else if (keys.a.pressed && lastKey === 'a') {
     player.animate = true
@@ -378,7 +378,7 @@ function animate() {
 
     if (moving)
       movables.forEach((movable) => {
-        movable.position.x += 3
+        movable.position.x += 5
       })
   } else if (keys.s.pressed && lastKey === 's') {
     player.animate = true
@@ -411,7 +411,7 @@ function animate() {
 
     if (moving)
       movables.forEach((movable) => {
-        movable.position.y -= 3
+        movable.position.y -= 5
       })
   } else if (keys.d.pressed && lastKey === 'd') {
     player.animate = true
@@ -444,7 +444,7 @@ function animate() {
 
     if (moving)
       movables.forEach((movable) => {
-        movable.position.x -= 3
+        movable.position.x -= 5
       })
   }
 }
