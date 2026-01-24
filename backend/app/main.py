@@ -5,11 +5,11 @@ load_dotenv()
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from rag.pipeline import initialize_rag
+from app.rag.pipeline import initialize_rag
 
 
-from database import engine, Base
-from routes import auth, users, todo, emergency_contact, ai_assistant, planner, expense, trip
+from app.database import engine, Base
+from app.routes import auth, users, todo, emergency_contact, ai_assistant, planner, expense, trip
 from sqlalchemy import text
 
 app = FastAPI(title="Travista Backend")
