@@ -61,6 +61,7 @@ export default function BudgetPage() {
     amount: "",
     category: "food",
     date: new Date().toISOString().slice(0, 10),
+    source: "manual",
   });
 
   // UI State
@@ -260,6 +261,7 @@ export default function BudgetPage() {
       amount: amount ? amount.toString() : "",
       category: mappedCategory,
       date: expenseDate,
+      source: "ocr",
     });
 
     setScanConfidence(confidence);
@@ -304,6 +306,7 @@ export default function BudgetPage() {
         category: manualExpense.category,
         date: manualExpense.date,
         trip_id: activeTripId,
+        source: manualExpense.source || "manual",
       });
 
       if (result.status === "error") {
@@ -338,6 +341,7 @@ export default function BudgetPage() {
         amount: "",
         category: "food",
         date: new Date().toISOString().slice(0, 10),
+        source: "manual",
       });
       setScanMessage("✅ Expense added successfully!");
       setTimeout(() => setScanMessage(""), 3000);

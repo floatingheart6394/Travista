@@ -10,6 +10,7 @@ class TripCreate(BaseModel):
     trip_styles: List[str] = []
     start_date: Optional[date] = None
     end_date: Optional[date] = None
+    itinerary: Optional[str] = None
 
 class TripResponse(TripCreate):
     id: int

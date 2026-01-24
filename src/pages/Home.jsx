@@ -1,5 +1,4 @@
 import Hero from "../components/Hero";
-import Explore from "../components/Explore";
 import Plan from "../components/Plan";
 import Budget from "../components/Budget";
 import Tavi from "../components/Tavi";
@@ -13,7 +12,6 @@ export default function Home() {
     <>
       <CustomCursor />
       <Hero />
-      <Explore />
       <Plan />
       <Budget />
       <Tavi />

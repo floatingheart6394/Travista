@@ -4,6 +4,14 @@ export default function CustomCursor() {
   const cursorRef = useRef(null);
   const [isBig, setIsBig] = useState(false);
 
+  // Toggle body class to hide the default cursor only when this component is mounted
+  useEffect(() => {
+    document.body.classList.add("use-custom-cursor");
+    return () => {
+      document.body.classList.remove("use-custom-cursor");
+    };
+  }, []);
+
   useEffect(() => {
     const cursor = cursorRef.current;
     if (!cursor) return;

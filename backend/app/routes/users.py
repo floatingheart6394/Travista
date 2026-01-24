@@ -43,6 +43,12 @@ async def update_my_profile(
     user_id: int = Depends(get_current_user_id),
     db: AsyncSession = Depends(get_db)
 ):
+    print(f"[UPDATE PROFILE] User {user_id}")
+    print(f"[UPDATE PROFILE] Payload name: {payload.name}")
+    print(f"[UPDATE PROFILE] Payload email: {payload.email}")
+    print(f"[UPDATE PROFILE] Payload profile_image_url: {payload.profile_image_url}")
+    print(f"[UPDATE PROFILE] profile_image_url length: {len(payload.profile_image_url) if payload.profile_image_url else 0}")
+    
     # Fetch current user
     result = await db.execute(select(User).where(User.id == user_id))
     user = result.scalars().first()
@@ -60,10 +66,12 @@ async def update_my_profile(
 
     # Upsert profile picture URL in separate table
     if payload.profile_image_url:
+        print(f"[UPDATE PROFILE] Saving profile image URL to database")
         # Remove existing rows to keep latest single record
         await db.execute(delete(ProfilePicture).where(ProfilePicture.user_id == user_id))
         db.add(ProfilePicture(user_id=user_id, image_url=payload.profile_image_url))
     else:
+        print(f"[UPDATE PROFILE] No profile_image_url, clearing existing")
         # Optional: clear profile picture if empty string provided
         await db.execute(delete(ProfilePicture).where(ProfilePicture.user_id == user_id))
 
@@ -75,6 +83,7 @@ async def update_my_profile(
         select(ProfilePicture.image_url).where(ProfilePicture.user_id == user_id).order_by(ProfilePicture.id.desc())
     )
     image_url = pic_result.scalar()
+    print(f"[UPDATE PROFILE] Retrieved image_url from DB: {image_url}")
 
     return ProfileResponse(
         id=user.id,

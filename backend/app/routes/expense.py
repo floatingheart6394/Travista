@@ -95,6 +95,20 @@ async def get_expenses(
     )
     return res.scalars().all()
 
+# 📄 Get all expenses for user (past records)
+@router.get("/all-expenses", response_model=list[ExpenseResponse])
+async def get_all_expenses(
+    db: AsyncSession = Depends(get_db),
+    user_id: int = Security(get_current_user_id),
+):
+    """Get all expenses for the user across all trips."""
+    res = await db.execute(
+        select(Expense)
+        .where(Expense.user_id == user_id)
+        .order_by(Expense.date.desc())
+    )
+    return res.scalars().all()
+
 
 # 🗑️ Delete expense
 @router.delete("/expenses/{expense_id}")

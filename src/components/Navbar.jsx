@@ -12,9 +12,6 @@ export default function Navbar() {
         TRAVISTA
       </h2>
       <div className="nav-links">
-        <a href="#explore" data-cursor-big="true">
-          Explore
-        </a>
         <a href="#plan" data-cursor-big="true">
           Plan
         </a>

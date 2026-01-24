@@ -8,7 +8,7 @@ def initialize_rag(data_dir: str) -> None:
     Call this during application startup.
     """
     initialize_vector_store(data_dir)
-    print("✓ RAG system initialized successfully")
+    print("[info] RAG system initialized successfully")
 
 def rag_pipeline(question: str) -> dict:
     """

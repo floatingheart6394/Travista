@@ -78,3 +78,16 @@ async def get_trip(trip_id, db: AsyncSession = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Trip not found")
 
     return trip
+
+@router.get("/past/all", response_model=list[TripResponse])
+async def get_past_trips(
+    db: AsyncSession = Depends(get_db),
+    user_id: int = Depends(get_current_user_id),
+):
+    """Get all trips (past and current) for the user with their itineraries."""
+    result = await db.execute(
+        select(Trip)
+        .where(Trip.user_id == user_id)
+        .order_by(Trip.created_at.desc())
+    )
+    return result.scalars().all()

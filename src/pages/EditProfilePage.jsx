@@ -43,6 +43,7 @@ export default function EditProfilePage() {
   const [photoDataUrl, setPhotoDataUrl] = useState(initial.photoDataUrl);
   const [email, setEmail] = useState("");
   const [isSaved, setIsSaved] = useState(false);
+  const [errorModal, setErrorModal] = useState({ open: false, message: "" });
 
   // Fetch profile from backend on mount
   useEffect(() => {
@@ -95,16 +96,21 @@ export default function EditProfilePage() {
 
     localStorage.setItem(PROFILE_PUBLIC_KEY, JSON.stringify(payload));
     try {
-      await updateProfile({
+      const updatePayload = {
         name: payload.fullName,
         email: email || "",
         profile_image_url: photoDataUrl || null,
-      });
+      };
+      
+      await updateProfile(updatePayload);
       setIsSaved(true);
+      
+      // Notify navbar to refresh
+      window.dispatchEvent(new Event("profileUpdated"));
     } catch (err) {
       console.error("Profile update failed", err);
       setIsSaved(false);
-      alert(err.message || "Failed to save profile");
+      setErrorModal({ open: true, message: err.message || "Failed to save profile" });
     }
   };
 
@@ -197,6 +203,34 @@ export default function EditProfilePage() {
           </section>
         </div>
       </main>
+
+      {errorModal.open && (
+        <div className="modal-overlay" onClick={() => setErrorModal({ open: false, message: "" })}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3>Error</h3>
+              <button
+                className="modal-close"
+                onClick={() => setErrorModal({ open: false, message: "" })}
+                aria-label="Close"
+              >
+                ×
+              </button>
+            </div>
+            <div className="modal-body">
+              <p>{errorModal.message}</p>
+            </div>
+            <div className="modal-footer">
+              <button
+                className="modal-btn"
+                onClick={() => setErrorModal({ open: false, message: "" })}
+              >
+                OK
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
