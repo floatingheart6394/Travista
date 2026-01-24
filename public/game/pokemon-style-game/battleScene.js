@@ -1,12 +1,18 @@
 const battleBackgroundImage = new Image()
 battleBackgroundImage.src = './img/battleBackground.png'
-const battleBackground = new Sprite({
-  position: {
-    x: 0,
-    y: 0
-  },
-  image: battleBackgroundImage
-})
+
+// Create fullscreen battle background
+let battleBackground
+
+function createBattleBackground() {
+  battleBackground = new Sprite({
+    position: {
+      x: 0,
+      y: 0
+    },
+    image: battleBackgroundImage
+  })
+}
 
 let draggle
 let emby
@@ -15,16 +21,28 @@ let battleAnimationId
 let queue
 
 function initBattle() {
+  // Create fullscreen battle background
+  createBattleBackground()
+  
   document.querySelector('#userInterface').style.display = 'block'
   document.querySelector('#dialogueBox').style.display = 'none'
   document.querySelector('#enemyHealthBar').style.width = '100%'
   document.querySelector('#playerHealthBar').style.width = '100%'
   document.querySelector('#attacksBox').replaceChildren()
 
+  // Create monsters with responsive positioning for fullscreen
   draggle = new Monster(monsters.Draggle)
   emby = new Monster(monsters.Emby)
+  
+  // Adjust positions based on canvas size
+  draggle.position.x = canvas.width * 0.80  // 78% from left (enemy on right)
+  draggle.position.y = canvas.height * 0.20 // 15% from top
+  
+  emby.position.x = canvas.width * 0.2    // 20% from left (player on left)
+  emby.position.y = canvas.height * 0.55  // 55% from top (lower position)
+  
   renderedSprites = [draggle, emby]
-  queue = []
+  queue = [] 
 
   emby.attacks.forEach((attack) => {
     const button = document.createElement('button')
@@ -114,7 +132,17 @@ function initBattle() {
 
 function animateBattle() {
   battleAnimationId = window.requestAnimationFrame(animateBattle)
-  battleBackground.draw()
+  
+  // Draw fullscreen battle background
+  c.drawImage(
+    battleBackgroundImage,
+    0, 0,
+    battleBackgroundImage.width,
+    battleBackgroundImage.height,
+    0, 0,
+    canvas.width,
+    canvas.height
+  )
 
   console.log(battleAnimationId)
 

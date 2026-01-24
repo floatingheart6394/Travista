@@ -1,0 +1,16 @@
+fastapi==0.110.3
+uvicorn[standard]==0.29.0
+sqlalchemy==2.0.30
+asyncpg==0.29.0
+python-dotenv==1.0.1
+passlib==1.7.4
+python-jose[cryptography]==3.3.0
+python-multipart==0.0.9
+pydantic==2.7.1
+email-validator==2.1.1
+langchain-community==0.2.7
+langchain-openai==0.1.20
+openai==1.35.10
+faiss-cpu==1.7.4
+pytesseract==0.3.10
+Pillow==10.3.0

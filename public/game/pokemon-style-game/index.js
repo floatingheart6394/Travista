@@ -4,7 +4,7 @@ const c = canvas.getContext('2d')
 canvas.width = window.innerWidth
 canvas.height = window.innerHeight
 
-// Resize canvas on window resize
+// Resize canvas on window resize 
 window.addEventListener('resize', () => {
   canvas.width = window.innerWidth
   canvas.height = window.innerHeight
@@ -30,8 +30,8 @@ console.log(charactersMap)
 // PORTAL SETUP - Gateway to Pygame World
 // ===============================================
 const portalImage = new Image()
-// Using fireball as placeholder - replace with actual portal sprite
-portalImage.src = './img/fireball.png'
+// Using Dimensional Portal sprite
+portalImage.src = './img/Dimensional_Portal.png'
 
 const portal = new Portal({
   position: {
@@ -40,10 +40,12 @@ const portal = new Portal({
   },
   image: portalImage,
   frames: {
-    max: 4,
-    hold: 30
+    max: 6,
+    hold: 10
   },
-  scale: 2,
+  scale: 4,
+  cols: 3,
+  rows: 2,
   targetUrl: '/game/pygame/build/web/index.html'
 })
 
@@ -164,7 +166,7 @@ playerRightImage.src = './img/playerRight.png'
 const player = new Sprite({
   position: {
     x: canvas.width / 2 - 192 / 4 / 2,
-    y: canvas.height / 2 - 68 / 2
+    y: canvas.height / 2 - 68 / 2 
   },
   image: playerDownImage,
   frames: {
@@ -276,7 +278,7 @@ function animate() {
           rectangle2: battleZone
         }) &&
         overlappingArea > (player.width * player.height) / 2 &&
-        Math.random() < 0.01
+        Math.random() < 0.25
       ) {
         // deactivate current animation loop
         window.cancelAnimationFrame(animationId)
@@ -343,7 +345,7 @@ function animate() {
 
     if (moving)
       movables.forEach((movable) => {
-        movable.position.y += 3
+        movable.position.y += 5
       })
   } else if (keys.a.pressed && lastKey === 'a') {
     player.animate = true
@@ -376,7 +378,7 @@ function animate() {
 
     if (moving)
       movables.forEach((movable) => {
-        movable.position.x += 3
+        movable.position.x += 5
       })
   } else if (keys.s.pressed && lastKey === 's') {
     player.animate = true
@@ -409,7 +411,7 @@ function animate() {
 
     if (moving)
       movables.forEach((movable) => {
-        movable.position.y -= 3
+        movable.position.y -= 5
       })
   } else if (keys.d.pressed && lastKey === 'd') {
     player.animate = true
@@ -442,7 +444,7 @@ function animate() {
 
     if (moving)
       movables.forEach((movable) => {
-        movable.position.x -= 3
+        movable.position.x -= 5
       })
   }
 }
