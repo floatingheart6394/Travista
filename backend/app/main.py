@@ -5,11 +5,11 @@ load_dotenv()
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.rag.pipeline import initialize_rag
+from rag.pipeline import initialize_rag
 
 
-from app.database import engine, Base
-from app.routes import auth, users, todo, emergency_contact, ai_assistant, planner, expense, trip
+from database import engine, Base
+from routes import auth, users, todo, emergency_contact, ai_assistant, planner, expense, trip
 from sqlalchemy import text
 
 app = FastAPI(title="Travista Backend")
@@ -36,9 +36,9 @@ async def startup():
         try:
             initialize_rag("app/rag/data")
         except Exception as e:
-            print(f"[warn] RAG initialization skipped: {e}")
+            print(f"⚠ RAG initialization skipped: {e}")
     else:
-        print("[info] RAG initialization disabled via ENABLE_RAG=false")
+        print("ℹ RAG initialization disabled via ENABLE_RAG=false")
 
 app.include_router(auth.router)
 app.include_router(users.router)
