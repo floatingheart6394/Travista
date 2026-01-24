@@ -11,6 +11,6 @@ email-validator==2.1.1
 langchain-community==0.2.7
 langchain-openai==0.1.20
 openai==1.35.10
-faiss-cpu==1.8.0
+faiss-cpu==1.9.0.post1
 pytesseract==0.3.10
 Pillow==10.3.0
