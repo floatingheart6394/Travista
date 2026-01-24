@@ -18,7 +18,7 @@ import {
   FaHospitalAlt,
   FaClinicMedical,
   FaCapsules,
-  FaFemale
+  FaFemale,
 } from "react-icons/fa";
 import { useNavigate } from "react-router-dom";
 import {
@@ -123,7 +123,7 @@ export default function EmergencyPage() {
         (tag) => `
         node${tag}(around:5000,${lat},${lon});
         way${tag}(around:5000,${lat},${lon});
-      `
+      `,
       )
       .join("");
 
@@ -153,7 +153,7 @@ export default function EmergencyPage() {
         const data = await fetchNearbyPlaces(
           userLocation.lat,
           userLocation.lon,
-          activeCategory
+          activeCategory,
         );
         setPlaces(data);
       } catch (err) {
@@ -177,9 +177,7 @@ export default function EmergencyPage() {
 
   const filteredPlaces = places
     .filter((p) =>
-      (p.tags?.name || "")
-        .toLowerCase()
-        .includes(search.toLowerCase())
+      (p.tags?.name || "").toLowerCase().includes(search.toLowerCase()),
     )
     .map((p) => {
       const lat = p.lat ?? p.center?.lat;
@@ -188,17 +186,14 @@ export default function EmergencyPage() {
 
       return {
         ...p,
-        _distance: Number(getDistanceKm(
-          userLocation.lat,
-          userLocation.lon,
-          lat,
-          lon
-        )),
+        _distance: Number(
+          getDistanceKm(userLocation.lat, userLocation.lon, lat, lon),
+        ),
       };
     })
     .filter(Boolean)
     .filter((p) => p._distance <= maxDistance)
-    .sort((a, b) => sortByDistance ? a._distance - b._distance : 0);
+    .sort((a, b) => (sortByDistance ? a._distance - b._distance : 0));
 
   function getDistanceKm(lat1, lon1, lat2, lon2) {
     const R = 6371; // km
@@ -207,9 +202,9 @@ export default function EmergencyPage() {
     const a =
       Math.sin(dLat / 2) * Math.sin(dLat / 2) +
       Math.cos((lat1 * Math.PI) / 180) *
-      Math.cos((lat2 * Math.PI) / 180) *
-      Math.sin(dLon / 2) *
-      Math.sin(dLon / 2);
+        Math.cos((lat2 * Math.PI) / 180) *
+        Math.sin(dLon / 2) *
+        Math.sin(dLon / 2);
     return (R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))).toFixed(1);
   }
   async function searchCity(query) {
@@ -217,8 +212,8 @@ export default function EmergencyPage() {
 
     const res = await fetch(
       `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(
-        query
-      )}&limit=5`
+        query,
+      )}&limit=5`,
     );
 
     const data = await res.json();
@@ -238,7 +233,10 @@ export default function EmergencyPage() {
               </span>
               <div>
                 <div className="loc-title">
-                  Current Location <span className={`chip ${isTrackingLocation ? "active" : ""}`}>
+                  Current Location{" "}
+                  <span
+                    className={`chip ${isTrackingLocation ? "active" : ""}`}
+                  >
                     {isTrackingLocation ? "Active" : "Not Active"}
                   </span>
                 </div>
@@ -249,7 +247,6 @@ export default function EmergencyPage() {
                       ? "Using selected location"
                       : "Location not set"}
                 </div>
-
               </div>
             </div>
             <div className="loc-actions">
@@ -275,7 +272,7 @@ export default function EmergencyPage() {
                     {
                       enableHighAccuracy: true,
                       maximumAge: 0,
-                    }
+                    },
                   );
                 }}
               >
@@ -287,9 +284,11 @@ export default function EmergencyPage() {
           <section className="emer-hotlines">
             <h2>Emergency Hotlines</h2>
             <div className="hotline-grid">
-              <div className="hot-card"
-                onClick={() => window.location.href = "tel:181"}
-                style={{ cursor: "pointer" }}>
+              <div
+                className="hot-card"
+                onClick={() => (window.location.href = "tel:181")}
+                style={{ cursor: "pointer" }}
+              >
                 <div className="hot-head">
                   <span className="hot-icon">
                     <FaFemale />
@@ -302,9 +301,11 @@ export default function EmergencyPage() {
                 <div className="hot-title">Women Helpline</div>
                 <div className="hot-sub">Women safety & emergency</div>
               </div>
-              <div className="hot-card"
-                onClick={() => window.location.href = "tel:100"}
-                style={{ cursor: "pointer" }}>
+              <div
+                className="hot-card"
+                onClick={() => (window.location.href = "tel:100")}
+                style={{ cursor: "pointer" }}
+              >
                 <div className="hot-head">
                   <span className="hot-icon">
                     <FiShield />
@@ -317,9 +318,11 @@ export default function EmergencyPage() {
                 <div className="hot-title">Police</div>
                 <div className="hot-sub">Law enforcement</div>
               </div>
-              <div className="hot-card"
-                onClick={() => window.location.href = "tel:108"}
-                style={{ cursor: "pointer" }}>
+              <div
+                className="hot-card"
+                onClick={() => (window.location.href = "tel:108")}
+                style={{ cursor: "pointer" }}
+              >
                 <div className="hot-head">
                   <span className="hot-icon">
                     <FaAmbulance />
@@ -332,9 +335,11 @@ export default function EmergencyPage() {
                 <div className="hot-title">Medical Emergency</div>
                 <div className="hot-sub">Free ambulance</div>
               </div>
-              <div className="hot-card"
-                onClick={() => window.location.href = "tel:101"}
-                style={{ cursor: "pointer" }}>
+              <div
+                className="hot-card"
+                onClick={() => (window.location.href = "tel:101")}
+                style={{ cursor: "pointer" }}
+              >
                 <div className="hot-head">
                   <span className="hot-icon">
                     <FaFireExtinguisher />
@@ -424,21 +429,27 @@ export default function EmergencyPage() {
                           type="text"
                           placeholder="Contact Name"
                           value={form.name}
-                          onChange={(e) => setForm({ ...form, name: e.target.value })}
+                          onChange={(e) =>
+                            setForm({ ...form, name: e.target.value })
+                          }
                         />
 
                         <input
                           type="tel"
                           placeholder="Phone Number"
                           value={form.phone}
-                          onChange={(e) => setForm({ ...form, phone: e.target.value })}
+                          onChange={(e) =>
+                            setForm({ ...form, phone: e.target.value })
+                          }
                         />
 
                         <input
                           type="text"
                           placeholder="Relation (optional)"
                           value={form.relation}
-                          onChange={(e) => setForm({ ...form, relation: e.target.value })}
+                          onChange={(e) =>
+                            setForm({ ...form, relation: e.target.value })
+                          }
                         />
 
                         <div className="modal-actions">
@@ -459,21 +470,25 @@ export default function EmergencyPage() {
                               if (!form.name || !form.phone) {
                                 setContactErrorModal({
                                   open: true,
-                                  message: "Name and phone number are required to add an emergency contact.",
+                                  message:
+                                    "Name and phone number are required to add an emergency contact.",
                                 });
                                 return;
                               }
 
                               try {
                                 setSaving(true);
-                                const newContact = await addEmergencyContact(form);
+                                const newContact =
+                                  await addEmergencyContact(form);
                                 setContacts((prev) => [...prev, newContact]);
                                 setShowModal(false);
                                 setForm({ name: "", phone: "", relation: "" });
                               } catch (err) {
                                 setContactErrorModal({
                                   open: true,
-                                  message: err.message || "Failed to add contact. Please try again.",
+                                  message:
+                                    err.message ||
+                                    "Failed to add contact. Please try again.",
                                 });
                               } finally {
                                 setSaving(false);
@@ -486,7 +501,6 @@ export default function EmergencyPage() {
                       </div>
                     </div>
                   )}
-
                 </div>
 
                 {loadingContacts && <p>Loading contacts...</p>}
@@ -500,7 +514,9 @@ export default function EmergencyPage() {
                       </div>
                       <div className="qmain">
                         <div className="qtitle">{c.name}</div>
-                        <div className="qsub">{c.relation || "Emergency Contact"}</div>
+                        <div className="qsub">
+                          {c.relation || "Emergency Contact"}
+                        </div>
                       </div>
                     </div>
 
@@ -517,7 +533,9 @@ export default function EmergencyPage() {
                         className="danger"
                         onClick={async () => {
                           await deleteEmergencyContact(c.id);
-                          setContacts((prev) => prev.filter((x) => x.id !== c.id));
+                          setContacts((prev) =>
+                            prev.filter((x) => x.id !== c.id),
+                          );
                         }}
                       >
                         Delete
@@ -530,12 +548,13 @@ export default function EmergencyPage() {
 
             {/* Main content */}
             <section className="emer-main">
-
               <div className="card">
                 <div className="list-head">
                   <h3>
                     Nearby {CATEGORY_CONFIG[activeCategory].label}{" "}
-                    <span className="muted">({filteredPlaces.length} results)</span>
+                    <span className="muted">
+                      ({filteredPlaces.length} results)
+                    </span>
                   </h3>
                   {view === "list" && (
                     <div
@@ -544,9 +563,7 @@ export default function EmergencyPage() {
                       onClick={() => setSortByDistance((prev) => !prev)}
                     >
                       Sort by{" "}
-                      <strong>
-                        {sortByDistance ? "Distance" : "Default"}
-                      </strong>{" "}
+                      <strong>{sortByDistance ? "Distance" : "Default"}</strong>{" "}
                       ▾
                     </div>
                   )}
@@ -556,7 +573,9 @@ export default function EmergencyPage() {
                     <>
                       {loadingPlaces && (
                         <p>
-                          Loading nearby {CATEGORY_CONFIG[activeCategory].label.toLowerCase()}...
+                          Loading nearby{" "}
+                          {CATEGORY_CONFIG[activeCategory].label.toLowerCase()}
+                          ...
                         </p>
                       )}
 
@@ -572,15 +591,16 @@ export default function EmergencyPage() {
 
                         const distance = userLocation
                           ? getDistanceKm(
-                            userLocation.lat,
-                            userLocation.lon,
-                            lat,
-                            lon
-                          )
+                              userLocation.lat,
+                              userLocation.lon,
+                              lat,
+                              lon,
+                            )
                           : null;
 
                         const amenity = p.tags?.amenity || "service";
-                        const phone = p.tags?.phone || p.tags?.["contact:phone"];
+                        const phone =
+                          p.tags?.phone || p.tags?.["contact:phone"];
 
                         return (
                           <article key={p.id} className="place">
@@ -591,7 +611,8 @@ export default function EmergencyPage() {
                             <div className="pl-main">
                               <h4>{name}</h4>
                               <div className="pl-type">
-                                {amenity.charAt(0).toUpperCase() + amenity.slice(1)}
+                                {amenity.charAt(0).toUpperCase() +
+                                  amenity.slice(1)}
                               </div>
                               <div className="pl-meta">
                                 📍 {address || "Address not available"}
@@ -599,7 +620,11 @@ export default function EmergencyPage() {
                             </div>
 
                             <div className="pl-actions">
-                              {distance && <div className="distance">{distance} km away</div>}
+                              {distance && (
+                                <div className="distance">
+                                  {distance} km away
+                                </div>
+                              )}
                               <div className="buttons">
                                 <a
                                   className="primary"
@@ -610,7 +635,10 @@ export default function EmergencyPage() {
                                   Get Directions
                                 </a>
                                 {phone && (
-                                  <a href={`tel:${toTel(phone)}`} className="outline">
+                                  <a
+                                    href={`tel:${toTel(phone)}`}
+                                    className="outline"
+                                  >
                                     <FiPhoneCall /> Call
                                   </a>
                                 )}
@@ -651,36 +679,31 @@ export default function EmergencyPage() {
           </div>
         </div>
       </main>
-      {
-        showFilters && (
-          <div className="modal-backdrop">
-            <div className="modal">
-              <h3>Filters</h3>
+      {showFilters && (
+        <div className="modal-backdrop">
+          <div className="modal">
+            <h3>Filters</h3>
 
-              <label>
-                Maximum distance: <strong>{maxDistance} km</strong>
-              </label>
+            <label>
+              Maximum distance: <strong>{maxDistance} km</strong>
+            </label>
 
-              <input
-                type="range"
-                min="1"
-                max="25"
-                value={maxDistance}
-                onChange={(e) => setMaxDistance(Number(e.target.value))}
-              />
+            <input
+              type="range"
+              min="1"
+              max="25"
+              value={maxDistance}
+              onChange={(e) => setMaxDistance(Number(e.target.value))}
+            />
 
-              <div className="modal-actions">
-                <button
-                  className="outline"
-                  onClick={() => setShowFilters(false)}
-                >
-                  Close
-                </button>
-              </div>
+            <div className="modal-actions">
+              <button className="outline" onClick={() => setShowFilters(false)}>
+                Close
+              </button>
             </div>
           </div>
-        )
-      }
+        </div>
+      )}
       {userLocation && (
         <pre style={{ fontSize: 12 }}>
           {JSON.stringify(userLocation, null, 2)}

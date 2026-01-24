@@ -51,7 +51,7 @@ export default function NewNavbar() {
     };
 
     window.addEventListener("storage", handleStorageChange);
-    
+
     // Also listen for custom profile update events
     const handleProfileUpdate = () => {
       loadProfile();
@@ -114,54 +114,54 @@ export default function NewNavbar() {
           className="newnav-action"
           aria-label="Profile"
           onClick={() => navigate("/profile")}
-          style={{ 
-            padding: '0',
-            width: '40px',
-            height: '40px',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center'
+          style={{
+            padding: "0",
+            width: "40px",
+            height: "40px",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
           }}
         >
           {photoDataUrl ? (
             <div
               style={{
-                width: '36px',
-                height: '36px',
-                borderRadius: '50%',
-                border: '2px solid #FF9500',
-                overflow: 'hidden',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                backgroundColor: '#f0f0f0',
+                width: "36px",
+                height: "36px",
+                borderRadius: "50%",
+                border: "2px solid #FF9500",
+                overflow: "hidden",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                backgroundColor: "#f0f0f0",
               }}
             >
               <img
                 src={photoDataUrl}
                 alt="Profile"
                 style={{
-                  width: '100%',
-                  height: '100%',
-                  objectFit: 'cover',
-                  display: 'block',
+                  width: "100%",
+                  height: "100%",
+                  objectFit: "cover",
+                  display: "block",
                 }}
               />
             </div>
           ) : (
             <div
               style={{
-                width: '36px',
-                height: '36px',
-                borderRadius: '50%',
-                border: '2px solid #FF9500',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                backgroundColor: '#FF9500',
-                color: 'white',
-                fontSize: '14px',
-                fontWeight: '600',
+                width: "36px",
+                height: "36px",
+                borderRadius: "50%",
+                border: "2px solid #FF9500",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                backgroundColor: "#FF9500",
+                color: "white",
+                fontSize: "14px",
+                fontWeight: "600",
               }}
             >
               {initialsFromName(userName)}

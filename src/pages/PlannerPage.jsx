@@ -27,12 +27,12 @@ function ItineraryDisplay({ itinerary }) {
   const parseItinerary = (text) => {
     const days = [];
     const seenDays = new Set(); // Track which days we've already added
-    
+
     // Match "Day X:" patterns - more specific to avoid matching cost summaries
     const dayPattern = /^\s*day\s+(\d+)\s*:?/gim;
     let match;
     const dayIndices = [];
-    
+
     // Find all occurrences of "Day X" at line start
     while ((match = dayPattern.exec(text)) !== null) {
       const dayNum = match[1];
@@ -41,12 +41,12 @@ function ItineraryDisplay({ itinerary }) {
         dayIndices.push({
           dayNum: dayNum,
           startIndex: match.index,
-          matchLength: match[0].length
+          matchLength: match[0].length,
         });
         seenDays.add(dayNum);
       }
     }
-    
+
     // If no day headers found, try more flexible pattern
     if (dayIndices.length === 0) {
       const flexiblePattern = /day\s+(\d+)/gi;
@@ -56,97 +56,100 @@ function ItineraryDisplay({ itinerary }) {
           dayIndices.push({
             dayNum: dayNum,
             startIndex: match.index,
-            matchLength: match[0].length
+            matchLength: match[0].length,
           });
           seenDays.add(dayNum);
         }
       }
     }
-    
+
     // Sort by day number to ensure correct order
     dayIndices.sort((a, b) => parseInt(a.dayNum) - parseInt(b.dayNum));
-    
+
     // Extract content for each day
     dayIndices.forEach((dayInfo, idx) => {
       const dayNum = dayInfo.dayNum;
       // Start from the position after "Day X"
-      let contentStart = text.indexOf(':', dayInfo.startIndex);
+      let contentStart = text.indexOf(":", dayInfo.startIndex);
       if (contentStart === -1) {
         contentStart = dayInfo.startIndex + dayInfo.matchLength;
       } else {
         contentStart += 1; // Move past the colon
       }
-      
+
       // Find the next "Day X" or use end of text
       let contentEnd = text.length;
       if (idx < dayIndices.length - 1) {
         contentEnd = dayIndices[idx + 1].startIndex;
       }
-      
+
       let rawContent = text.substring(contentStart, contentEnd).trim();
-      
+
       // Clean up the content - remove markdown artifacts and AI garbage
       let content = rawContent
-        .replace(/^\s*[:;]\s*/gm, '')                                  // Remove leading colons/semicolons
-        .replace(/\*\*(.+?)\*\*/g, '$1')                               // Remove **bold**
-        .replace(/\*(.+?)\*/g, '$1')                                   // Remove *italic*
-        .replace(/^[-•]\s+/gm, '')                                     // Remove bullet points
-        .replace(/^"(.+)"$/gm, '$1')                                   // Remove quotes
-        .replace(/^-{3,}$/gm, '')                                      // Remove horizontal rules (---, ----, etc)
-        .replace(/^\*{3,}$/gm, '')                                     // Remove *** separators
-        .replace(/^\*+$/gm, '')                                        // Remove standalone asterisks
-        .replace(/^_+$/gm, '')                                         // Remove underscore separators
-        .replace(/^#{1,6}\s+/gm, '')                                   // Remove markdown headings (# ## ### etc)
-        .replace(/^Location:\s*[\d\s,]+$/gm, '')                       // Remove "Location: 100, 101, 102..." pattern
-        .replace(/^\d{1,3}(?:\s*,\s*\d{1,3})+\s*$/gm, '')             // Remove comma-separated number sequences
-        .split('\n')                                                   // Split into lines
-        .map(line => line
-          .replace(/\*+/g, '')                                         // Remove asterisks
-          .replace(/#+/g, '')                                          // Remove hash symbols
-          .replace(/^[\d\s,]+$/, '')                                   // Remove lines with only numbers/commas
-          .trim()
+        .replace(/^\s*[:;]\s*/gm, "") // Remove leading colons/semicolons
+        .replace(/\*\*(.+?)\*\*/g, "$1") // Remove **bold**
+        .replace(/\*(.+?)\*/g, "$1") // Remove *italic*
+        .replace(/^[-•]\s+/gm, "") // Remove bullet points
+        .replace(/^"(.+)"$/gm, "$1") // Remove quotes
+        .replace(/^-{3,}$/gm, "") // Remove horizontal rules (---, ----, etc)
+        .replace(/^\*{3,}$/gm, "") // Remove *** separators
+        .replace(/^\*+$/gm, "") // Remove standalone asterisks
+        .replace(/^_+$/gm, "") // Remove underscore separators
+        .replace(/^#{1,6}\s+/gm, "") // Remove markdown headings (# ## ### etc)
+        .replace(/^Location:\s*[\d\s,]+$/gm, "") // Remove "Location: 100, 101, 102..." pattern
+        .replace(/^\d{1,3}(?:\s*,\s*\d{1,3})+\s*$/gm, "") // Remove comma-separated number sequences
+        .split("\n") // Split into lines
+        .map((line) =>
+          line
+            .replace(/\*+/g, "") // Remove asterisks
+            .replace(/#+/g, "") // Remove hash symbols
+            .replace(/^[\d\s,]+$/, "") // Remove lines with only numbers/commas
+            .trim(),
         )
-        .filter(line => line.length > 0)                              // Remove empty lines
-        .join('\n')                                                    // Rejoin
+        .filter((line) => line.length > 0) // Remove empty lines
+        .join("\n") // Rejoin
         .trim();
-      
+
       // Split content into sections
       const sections = [];
-      const lines = content.split('\n');
-      
+      const lines = content.split("\n");
+
       let currentSection = null;
       lines.forEach((line) => {
         const trimmed = line.trim();
         if (!trimmed) return;
-        
+
         // Check if it's a section header
-        const headerMatch = trimmed.match(/^(morning|afternoon|evening|breakfast|lunch|dinner|activities|recommendations|budget|cost|transportation|tips|highlights|attractions|dining|nightlife|local)[\s:]/i);
-        
+        const headerMatch = trimmed.match(
+          /^(morning|afternoon|evening|breakfast|lunch|dinner|activities|recommendations|budget|cost|transportation|tips|highlights|attractions|dining|nightlife|local)[\s:]/i,
+        );
+
         if (headerMatch) {
           if (currentSection && currentSection.items.length > 0) {
             sections.push(currentSection);
           }
           const title = trimmed
-            .replace(/[:;]\s*$/, '')
-            .replace(/\*+/g, '')  // Remove asterisks from title
+            .replace(/[:;]\s*$/, "")
+            .replace(/\*+/g, "") // Remove asterisks from title
             .trim();
-          currentSection = { 
+          currentSection = {
             title: title.charAt(0).toUpperCase() + title.slice(1),
-            items: [] 
+            items: [],
           };
         } else {
           if (!currentSection) {
-            currentSection = { 
-              title: 'Highlights', 
-              items: [] 
+            currentSection = {
+              title: "Highlights",
+              items: [],
             };
           }
           // Clean item text: remove markdown, dashes, numbers, etc.
           const cleanedItem = trimmed
-            .replace(/\*+/g, '')           // Remove asterisks
-            .replace(/#+/g, '')            // Remove hash symbols
-            .replace(/^-+\s*/, '')         // Remove leading dashes
-            .replace(/\s*-+\s*$/, '')      // Remove trailing dashes
+            .replace(/\*+/g, "") // Remove asterisks
+            .replace(/#+/g, "") // Remove hash symbols
+            .replace(/^-+\s*/, "") // Remove leading dashes
+            .replace(/\s*-+\s*$/, "") // Remove trailing dashes
             .trim();
           // Skip lines that are just numbers or special artifacts
           if (cleanedItem && !/^[\d\s,]+$/.test(cleanedItem)) {
@@ -154,7 +157,7 @@ function ItineraryDisplay({ itinerary }) {
           }
         }
       });
-      
+
       // Don't forget the last section
       if (currentSection && currentSection.items.length > 0) {
         sections.push(currentSection);
@@ -163,7 +166,7 @@ function ItineraryDisplay({ itinerary }) {
       days.push({
         number: dayNum,
         sections: sections,
-        rawContent: content
+        rawContent: content,
       });
     });
 
@@ -187,7 +190,9 @@ function ItineraryDisplay({ itinerary }) {
                     <h5 className="section-title">{section.title}</h5>
                     <div className="section-items">
                       {section.items.map((item, iIdx) => (
-                        <p key={iIdx} className="section-item">{item}</p>
+                        <p key={iIdx} className="section-item">
+                          {item}
+                        </p>
                       ))}
                     </div>
                   </div>
@@ -195,9 +200,11 @@ function ItineraryDisplay({ itinerary }) {
               </div>
             ) : (
               <div className="day-text">
-                {day.rawContent.split('\n').map((line, idx) => 
-                  line.trim() ? <p key={idx}>{line}</p> : null
-                )}
+                {day.rawContent
+                  .split("\n")
+                  .map((line, idx) =>
+                    line.trim() ? <p key={idx}>{line}</p> : null,
+                  )}
               </div>
             )}
           </div>
@@ -258,7 +265,7 @@ export default function PlannerPage() {
   // Persist planner data on change (only after initial load)
   useEffect(() => {
     if (!hasLoadedCache) return;
-    
+
     const payload = {
       destination,
       startDate,
@@ -275,9 +282,19 @@ export default function PlannerPage() {
     } catch (e) {
       console.error("Failed to save planner cache", e);
     }
-  }, [hasLoadedCache, destination, startDate, endDate, duration, budget, travelers, tripStyles, itinerary]);
+  }, [
+    hasLoadedCache,
+    destination,
+    startDate,
+    endDate,
+    duration,
+    budget,
+    travelers,
+    tripStyles,
+    itinerary,
+  ]);
 
- /* useEffect(() => {
+  /* useEffect(() => {
     async function loadTrip() {
       try {
         const res = await fetch(`${API_URL}/trip/active`, {
@@ -308,7 +325,7 @@ export default function PlannerPage() {
 
   const toggleStyle = (s) => {
     setTripStyles((prev) =>
-      prev.includes(s) ? prev.filter((x) => x !== s) : [...prev, s]
+      prev.includes(s) ? prev.filter((x) => x !== s) : [...prev, s],
     );
   };
 
@@ -341,7 +358,7 @@ export default function PlannerPage() {
 
     try {
       setLoading(true);
-      
+
       // First, save the trip
       await fetch(`${API_URL}/trip/`, {
         method: "POST",
@@ -353,11 +370,15 @@ export default function PlannerPage() {
       });
 
       // Then, generate itinerary using OpenAI
-      const dateRange = startDate && endDate ? `from ${startDate} to ${endDate}` : "";
-      
+      const dateRange =
+        startDate && endDate ? `from ${startDate} to ${endDate}` : "";
+
       // Generate day list for explicit instruction
-      const daysList = Array.from({ length: payload.duration }, (_, i) => `Day ${i + 1}`).join(", ");
-      
+      const daysList = Array.from(
+        { length: payload.duration },
+        (_, i) => `Day ${i + 1}`,
+      ).join(", ");
+
       const prompt = `You are an expert travel planner. Your task is to create a COMPLETE, DETAILED, and COMPREHENSIVE ${payload.duration}-day itinerary for ${payload.travelers} traveler(s) visiting ${payload.destination} ${dateRange}.
 
 ⚠️ CRITICAL REQUIREMENT: You MUST generate a detailed plan for EVERY SINGLE DAY. This is a ${payload.duration}-day trip, so you MUST provide content for ALL of these days: ${daysList}
@@ -555,7 +576,11 @@ FINAL CHECK: Before you finish, verify you have provided content for Day 1 throu
             </div>
 
             <div className="planner-actions">
-              <button className="planner-generate" onClick={handleGenerate} disabled={loading}>
+              <button
+                className="planner-generate"
+                onClick={handleGenerate}
+                disabled={loading}
+              >
                 <span className="bolt">
                   <FiZap />
                 </span>
@@ -569,11 +594,8 @@ FINAL CHECK: Before you finish, verify you have provided content for Day 1 throu
             )}
 
             {error && (
-              <p style={{ marginTop: "1rem", color: "red" }}>
-                {error}
-              </p>
+              <p style={{ marginTop: "1rem", color: "red" }}>{error}</p>
             )}
-
           </section>
 
           {itinerary && (

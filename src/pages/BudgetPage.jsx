@@ -12,7 +12,10 @@ import {
   LineElement,
   PointElement,
 } from "chart.js";
-import { scanReceipt, addExpense as addExpenseAPI } from "../services/budgetService";
+import {
+  scanReceipt,
+  addExpense as addExpenseAPI,
+} from "../services/budgetService";
 import "../styles/BudgetPage.css";
 
 ChartJS.register(
@@ -23,7 +26,7 @@ ChartJS.register(
   LinearScale,
   BarElement,
   LineElement,
-  PointElement
+  PointElement,
 );
 
 const API_URL = import.meta.env.VITE_API_BASE_URL;
@@ -85,7 +88,7 @@ export default function BudgetPage() {
       setActiveTripId(trip.id);
       setTripBudget(trip.budget ?? 0);
       setTripDestination(trip.destination ?? "");
-      
+
       // Use explicit start_date and end_date from trip if available
       let start, end;
       if (trip.start_date && trip.end_date) {
@@ -96,32 +99,37 @@ export default function BudgetPage() {
         const startDate = new Date();
         const startDateKey = startDate.toISOString().split("T")[0];
         start = new Date(startDateKey + "T00:00:00Z");
-        end = new Date(start.getTime() + ((trip.duration || 1) - 1) * 24 * 60 * 60 * 1000);
+        end = new Date(
+          start.getTime() + ((trip.duration || 1) - 1) * 24 * 60 * 60 * 1000,
+        );
       }
       setStartDate(start);
       setEndDate(end);
 
       // #region agent log
-      fetch("http://127.0.0.1:7242/ingest/f67b22ff-b9f1-49eb-90ce-af684507f178", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          sessionId: "debug-session",
-          runId: "pre-fix",
-          hypothesisId: "H1",
-          location: "BudgetPage.jsx:loadBudgetData",
-          message: "Loaded active trip and computed start/end dates",
-          data: {
-            tripId: trip.id,
-            apiStartDate: trip.start_date || null,
-            apiEndDate: trip.end_date || null,
-            duration: trip.duration,
-            computedStart: start.toISOString(),
-            computedEnd: end.toISOString(),
-          },
-          timestamp: Date.now(),
-        }),
-      }).catch(() => {});
+      fetch(
+        "http://127.0.0.1:7242/ingest/f67b22ff-b9f1-49eb-90ce-af684507f178",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            sessionId: "debug-session",
+            runId: "pre-fix",
+            hypothesisId: "H1",
+            location: "BudgetPage.jsx:loadBudgetData",
+            message: "Loaded active trip and computed start/end dates",
+            data: {
+              tripId: trip.id,
+              apiStartDate: trip.start_date || null,
+              apiEndDate: trip.end_date || null,
+              duration: trip.duration,
+              computedStart: start.toISOString(),
+              computedEnd: end.toISOString(),
+            },
+            timestamp: Date.now(),
+          }),
+        },
+      ).catch(() => {});
       // #endregion
 
       await fetchExpenses(trip.id);
@@ -144,8 +152,11 @@ export default function BudgetPage() {
       setExpenses(
         data.map((e) => ({
           ...e,
-          date: typeof e.date === "string" ? e.date : new Date(e.date).toISOString().slice(0, 10),
-        }))
+          date:
+            typeof e.date === "string"
+              ? e.date
+              : new Date(e.date).toISOString().slice(0, 10),
+        })),
       );
     } catch (err) {
       console.error("Failed to fetch expenses:", err);
@@ -161,7 +172,11 @@ export default function BudgetPage() {
       return Date.UTC(y, m - 1, d);
     }
     if (value instanceof Date) {
-      return Date.UTC(value.getUTCFullYear(), value.getUTCMonth(), value.getUTCDate());
+      return Date.UTC(
+        value.getUTCFullYear(),
+        value.getUTCMonth(),
+        value.getUTCDate(),
+      );
     }
     return null;
   }
@@ -232,10 +247,16 @@ export default function BudgetPage() {
     const confidence = ocrResult.amount_confidence || 0;
     const detectedDate = ocrResult.detected_date;
 
-    console.log("Extracted data:", { vendor, amount, category, confidence, detectedDate });
+    console.log("Extracted data:", {
+      vendor,
+      amount,
+      category,
+      confidence,
+      detectedDate,
+    });
     console.log("Date from OCR:", detectedDate);
     console.log("Using fallback date:", !detectedDate);
-    
+
     // Show warning if date was not detected
     if (!detectedDate && amount) {
       console.warn("⚠️ Date not detected from receipt");
@@ -243,12 +264,12 @@ export default function BudgetPage() {
 
     // Map backend categories to frontend category keys
     const categoryMapping = {
-      "food": "food",
-      "stay": "stay",
-      "transport": "transport",
-      "shopping": "shopping",
-      "activities": "activities",
-      "misc": "misc"
+      food: "food",
+      stay: "stay",
+      transport: "transport",
+      shopping: "shopping",
+      activities: "activities",
+      misc: "misc",
     };
 
     const mappedCategory = categoryMapping[category] || "misc";
@@ -277,27 +298,30 @@ export default function BudgetPage() {
 
     try {
       // #region agent log
-      fetch("http://127.0.0.1:7242/ingest/f67b22ff-b9f1-49eb-90ce-af684507f178", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          sessionId: "debug-session",
-          runId: "amount-issue",
-          hypothesisId: "A1",
-          location: "BudgetPage.jsx:addExpense",
-          message: "Submitting expense payload",
-          data: {
-            place: manualExpense.place,
-            rawAmount: manualExpense.amount,
-            parsedAmount: parseFloat(manualExpense.amount),
-            category: manualExpense.category,
-            date: manualExpense.date,
-            tripId: activeTripId,
-            source: manualExpense.source || "manual",
-          },
-          timestamp: Date.now(),
-        }),
-      }).catch(() => {});
+      fetch(
+        "http://127.0.0.1:7242/ingest/f67b22ff-b9f1-49eb-90ce-af684507f178",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            sessionId: "debug-session",
+            runId: "amount-issue",
+            hypothesisId: "A1",
+            location: "BudgetPage.jsx:addExpense",
+            message: "Submitting expense payload",
+            data: {
+              place: manualExpense.place,
+              rawAmount: manualExpense.amount,
+              parsedAmount: parseFloat(manualExpense.amount),
+              category: manualExpense.category,
+              date: manualExpense.date,
+              tripId: activeTripId,
+              source: manualExpense.source || "manual",
+            },
+            timestamp: Date.now(),
+          }),
+        },
+      ).catch(() => {});
       // #endregion
 
       const result = await addExpenseAPI({
@@ -316,23 +340,26 @@ export default function BudgetPage() {
       }
 
       // #region agent log
-      fetch("http://127.0.0.1:7242/ingest/f67b22ff-b9f1-49eb-90ce-af684507f178", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          sessionId: "debug-session",
-          runId: "amount-issue",
-          hypothesisId: "A2",
-          location: "BudgetPage.jsx:addExpense",
-          message: "Expense API response",
-          data: {
-            responseStatus: result.status,
-            responseAmount: result.data?.amount,
-            responseId: result.data?.id,
-          },
-          timestamp: Date.now(),
-        }),
-      }).catch(() => {});
+      fetch(
+        "http://127.0.0.1:7242/ingest/f67b22ff-b9f1-49eb-90ce-af684507f178",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            sessionId: "debug-session",
+            runId: "amount-issue",
+            hypothesisId: "A2",
+            location: "BudgetPage.jsx:addExpense",
+            message: "Expense API response",
+            data: {
+              responseStatus: result.status,
+              responseAmount: result.data?.amount,
+              responseId: result.data?.id,
+            },
+            timestamp: Date.now(),
+          }),
+        },
+      ).catch(() => {});
       // #endregion
 
       setShowReceiptModal(false);
@@ -385,7 +412,7 @@ export default function BudgetPage() {
 
   const budgetPct = useMemo(
     () => (tripBudget ? Math.round((totalSpent / tripBudget) * 100) : 0),
-    [tripBudget, totalSpent]
+    [tripBudget, totalSpent],
   );
 
   const daysLeft = useMemo(() => {
@@ -437,7 +464,8 @@ export default function BudgetPage() {
     const breakdown = {};
     CATEGORIES.forEach((cat) => (breakdown[cat.key] = 0));
     expenses.forEach((exp) => {
-      breakdown[exp.category] = (breakdown[exp.category] || 0) + parseFloat(exp.amount);
+      breakdown[exp.category] =
+        (breakdown[exp.category] || 0) + parseFloat(exp.amount);
     });
     return breakdown;
   }, [expenses]);
@@ -468,7 +496,7 @@ export default function BudgetPage() {
           font: {
             size: 12,
           },
-          generateLabels: function(chart) {
+          generateLabels: function (chart) {
             const data = chart.data;
             return data.labels.map((label, i) => ({
               text: label,
@@ -495,7 +523,10 @@ export default function BudgetPage() {
     const dailyMap = {};
     expenses.forEach((exp) => {
       const dayNum = computeTripDayNumber(exp.date, startDate);
-      const dateKey = typeof exp.date === "string" ? exp.date.slice(0, 10) : new Date(exp.date).toISOString().slice(0, 10);
+      const dateKey =
+        typeof exp.date === "string"
+          ? exp.date.slice(0, 10)
+          : new Date(exp.date).toISOString().slice(0, 10);
       if (dayNum > 0) {
         dailyMap[dateKey] = (dailyMap[dateKey] || 0) + parseFloat(exp.amount);
       }
@@ -506,7 +537,11 @@ export default function BudgetPage() {
     const dayMs = 1000 * 60 * 60 * 24;
 
     let dayCount = 0;
-    for (let currentMs = normalizedStartDateMs; currentMs <= tripEndDateMs; currentMs += dayMs) {
+    for (
+      let currentMs = normalizedStartDateMs;
+      currentMs <= tripEndDateMs;
+      currentMs += dayMs
+    ) {
       dayCount++;
       const dateKey = new Date(currentMs).toISOString().split("T")[0];
       days.push({
@@ -652,7 +687,9 @@ export default function BudgetPage() {
           <h1>
             Budget Tracker <span>💰</span>
           </h1>
-          <p>Smart expense management for your {tripDestination || "trip"} trip</p>
+          <p>
+            Smart expense management for your {tripDestination || "trip"} trip
+          </p>
         </section>
 
         {/* Metric Cards */}
@@ -660,7 +697,9 @@ export default function BudgetPage() {
           <div className="metric-card metric--brand">
             <h4>Total Budget</h4>
             <div className="metric-amount">₹{tripBudget.toFixed(2)}</div>
-            <div className="metric-sub">{tripDestination ? `${tripDestination} Getaway` : "Your Trip"}</div>
+            <div className="metric-sub">
+              {tripDestination ? `${tripDestination} Getaway` : "Your Trip"}
+            </div>
           </div>
           <div className="metric-card">
             <h4>Amount Spent</h4>
@@ -674,8 +713,16 @@ export default function BudgetPage() {
           </div>
           <div className="metric-card">
             <h4>Remaining Budget</h4>
-            <div className="metric-amount">₹{(tripBudget - totalSpent).toFixed(2)}</div>
-            <div className="metric-sub">₹{(daysLeft > 0 ? ((tripBudget - totalSpent) / daysLeft).toFixed(2) : 0)}/day</div>
+            <div className="metric-amount">
+              ₹{(tripBudget - totalSpent).toFixed(2)}
+            </div>
+            <div className="metric-sub">
+              ₹
+              {daysLeft > 0
+                ? ((tripBudget - totalSpent) / daysLeft).toFixed(2)
+                : 0}
+              /day
+            </div>
           </div>
         </section>
 
@@ -686,7 +733,10 @@ export default function BudgetPage() {
             <span className="progress-percent">{budgetPct}%</span>
           </div>
           <div className="progress-bar">
-            <div className="progress-fill" style={{ width: `${Math.min(budgetPct, 100)}%` }} />
+            <div
+              className="progress-fill"
+              style={{ width: `${Math.min(budgetPct, 100)}%` }}
+            />
           </div>
         </section>
 
@@ -724,42 +774,53 @@ export default function BudgetPage() {
             <h3>📋 All Expenses ({expenses.length})</h3>
             <div className="expense-list">
               {expenses.length === 0 ? (
-                <p className="empty-message">No expenses yet. Start by scanning a receipt or adding manually!</p>
+                <p className="empty-message">
+                  No expenses yet. Start by scanning a receipt or adding
+                  manually!
+                </p>
               ) : (
                 expenses.map((e, index) => {
                   const cat = CATEGORIES.find((c) => c.key === e.category);
                   // Calculate day number consistently with dailySpendingData
                   const dayNum = computeTripDayNumber(e.date, startDate);
-                  const expenseDate = typeof e.date === "string" ? new Date(e.date + "T00:00:00Z") : new Date(e.date);
+                  const expenseDate =
+                    typeof e.date === "string"
+                      ? new Date(e.date + "T00:00:00Z")
+                      : new Date(e.date);
 
                   // #region agent log
                   if (index < 5 && startDate) {
-                    fetch("http://127.0.0.1:7242/ingest/f67b22ff-b9f1-49eb-90ce-af684507f178", {
-                      method: "POST",
-                      headers: { "Content-Type": "application/json" },
-                      body: JSON.stringify({
-                        sessionId: "debug-session",
-                        runId: "pre-fix",
-                        hypothesisId: "H3",
-                        location: "BudgetPage.jsx:expenseList",
-                        message: "Computed day number for expense",
-                        data: {
-                          expenseId: e.id,
-                          expenseDate: expenseDate.toISOString(),
-                          startDate: startDate.toISOString(),
-                          rawDate: e.date,
-                          dayNum: dayNum,
-                        },
-                        timestamp: Date.now(),
-                      }),
-                    }).catch(() => {});
+                    fetch(
+                      "http://127.0.0.1:7242/ingest/f67b22ff-b9f1-49eb-90ce-af684507f178",
+                      {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({
+                          sessionId: "debug-session",
+                          runId: "pre-fix",
+                          hypothesisId: "H3",
+                          location: "BudgetPage.jsx:expenseList",
+                          message: "Computed day number for expense",
+                          data: {
+                            expenseId: e.id,
+                            expenseDate: expenseDate.toISOString(),
+                            startDate: startDate.toISOString(),
+                            rawDate: e.date,
+                            dayNum: dayNum,
+                          },
+                          timestamp: Date.now(),
+                        }),
+                      },
+                    ).catch(() => {});
                   }
                   // #endregion
 
                   return (
                     <div key={e.id} className="expense-item">
                       <div className="expense-info">
-                        <span style={{ fontSize: "20px", minWidth: "30px" }}>{cat?.emoji}</span>
+                        <span style={{ fontSize: "20px", minWidth: "30px" }}>
+                          {cat?.emoji}
+                        </span>
                         <div>
                           <strong>{e.place}</strong>
                           <br />
@@ -769,8 +830,13 @@ export default function BudgetPage() {
                           </div>
                         </div>
                       </div>
-                      <div className="expense-amount">₹{parseFloat(e.amount).toFixed(2)}</div>
-                      <button className="btn-delete" onClick={() => deleteExpense(e.id)}>
+                      <div className="expense-amount">
+                        ₹{parseFloat(e.amount).toFixed(2)}
+                      </div>
+                      <button
+                        className="btn-delete"
+                        onClick={() => deleteExpense(e.id)}
+                      >
                         Delete
                       </button>
                     </div>
@@ -785,7 +851,10 @@ export default function BudgetPage() {
         {activeTab === "scan" && (
           <section className="receipt-scanner">
             <h3>📸 Scan Receipt</h3>
-            <p>Upload a receipt photo to automatically extract expense information</p>
+            <p>
+              Upload a receipt photo to automatically extract expense
+              information
+            </p>
             <div className="scanner-upload">
               <div className="file-input-wrapper">
                 <input
@@ -812,8 +881,8 @@ export default function BudgetPage() {
                   scanMessage.includes("✅")
                     ? "success"
                     : scanMessage.includes("❌")
-                    ? "error"
-                    : "loading"
+                      ? "error"
+                      : "loading"
                 }`}
               >
                 {scanMessage}
@@ -831,20 +900,26 @@ export default function BudgetPage() {
                 type="text"
                 placeholder="Where did you spend? (e.g., Coffee Shop, Hotel)"
                 value={manualExpense.place}
-                onChange={(e) => setManualExpense({ ...manualExpense, place: e.target.value })}
+                onChange={(e) =>
+                  setManualExpense({ ...manualExpense, place: e.target.value })
+                }
               />
               <input
                 type="number"
                 placeholder="Amount (0.00)"
                 value={manualExpense.amount}
-                onChange={(e) => setManualExpense({ ...manualExpense, amount: e.target.value })}
+                onChange={(e) =>
+                  setManualExpense({ ...manualExpense, amount: e.target.value })
+                }
                 step="0.01"
                 min="0"
               />
               <input
                 type="date"
                 value={manualExpense.date}
-                onChange={(e) => setManualExpense({ ...manualExpense, date: e.target.value })}
+                onChange={(e) =>
+                  setManualExpense({ ...manualExpense, date: e.target.value })
+                }
               />
             </div>
 
@@ -853,7 +928,9 @@ export default function BudgetPage() {
                 <button
                   key={cat.key}
                   className={`category-btn ${manualExpense.category === cat.key ? "active" : ""}`}
-                  onClick={() => setManualExpense({ ...manualExpense, category: cat.key })}
+                  onClick={() =>
+                    setManualExpense({ ...manualExpense, category: cat.key })
+                  }
                 >
                   <span className="cat-emoji">{cat.emoji}</span>
                   <span className="cat-label">{cat.label}</span>
@@ -877,7 +954,9 @@ export default function BudgetPage() {
                 {expenses.length > 0 ? (
                   <Doughnut data={doughnutData} options={doughnutOptions} />
                 ) : (
-                  <p className="no-chart-data">No expense data to display yet</p>
+                  <p className="no-chart-data">
+                    No expense data to display yet
+                  </p>
                 )}
               </div>
               <div className="chart-wrapper">
@@ -885,7 +964,9 @@ export default function BudgetPage() {
                 {expenses.length > 0 && lineChartData ? (
                   <Line data={lineChartData} options={lineChartOptions} />
                 ) : (
-                  <p className="no-chart-data">No expense data to display yet</p>
+                  <p className="no-chart-data">
+                    No expense data to display yet
+                  </p>
                 )}
               </div>
             </div>
@@ -895,23 +976,33 @@ export default function BudgetPage() {
 
       {/* Receipt Confirmation Modal */}
       {showReceiptModal && (
-        <div className="modal-overlay" onClick={() => setShowReceiptModal(false)}>
+        <div
+          className="modal-overlay"
+          onClick={() => setShowReceiptModal(false)}
+        >
           <div className="modal" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <h3>Confirm Scanned Expense</h3>
-              <button className="modal-close" onClick={() => {
-                setShowReceiptModal(false);
-                setScanMessage("");
-                setReceiptFile(null);
-                setReceiptPreview(null);
-                if (fileInputRef.current) fileInputRef.current.value = "";
-              }}>
+              <button
+                className="modal-close"
+                onClick={() => {
+                  setShowReceiptModal(false);
+                  setScanMessage("");
+                  setReceiptFile(null);
+                  setReceiptPreview(null);
+                  if (fileInputRef.current) fileInputRef.current.value = "";
+                }}
+              >
                 ✕
               </button>
             </div>
 
             {receiptPreview && (
-              <img src={receiptPreview} alt="Receipt" className="receipt-preview" />
+              <img
+                src={receiptPreview}
+                alt="Receipt"
+                className="receipt-preview"
+              />
             )}
 
             <div className="scanned-data">
@@ -920,7 +1011,12 @@ export default function BudgetPage() {
                 <input
                   type="text"
                   value={manualExpense.place}
-                  onChange={(e) => setManualExpense({ ...manualExpense, place: e.target.value })}
+                  onChange={(e) =>
+                    setManualExpense({
+                      ...manualExpense,
+                      place: e.target.value,
+                    })
+                  }
                 />
               </div>
               <div className="data-row">
@@ -928,7 +1024,12 @@ export default function BudgetPage() {
                 <input
                   type="number"
                   value={manualExpense.amount}
-                  onChange={(e) => setManualExpense({ ...manualExpense, amount: e.target.value })}
+                  onChange={(e) =>
+                    setManualExpense({
+                      ...manualExpense,
+                      amount: e.target.value,
+                    })
+                  }
                   step="0.01"
                 />
               </div>
@@ -936,7 +1037,12 @@ export default function BudgetPage() {
                 <label>Category:</label>
                 <select
                   value={manualExpense.category}
-                  onChange={(e) => setManualExpense({ ...manualExpense, category: e.target.value })}
+                  onChange={(e) =>
+                    setManualExpense({
+                      ...manualExpense,
+                      category: e.target.value,
+                    })
+                  }
                 >
                   {CATEGORIES.map((cat) => (
                     <option key={cat.key} value={cat.key}>
@@ -950,13 +1056,30 @@ export default function BudgetPage() {
                 <input
                   type="date"
                   value={manualExpense.date}
-                  onChange={(e) => setManualExpense({ ...manualExpense, date: e.target.value })}
-                  title={!ocrResult?.detected_date ? "Date not detected - please verify" : ""}
-                  style={!ocrResult?.detected_date ? { borderColor: "#ff9800", borderWidth: "2px" } : {}}
+                  onChange={(e) =>
+                    setManualExpense({ ...manualExpense, date: e.target.value })
+                  }
+                  title={
+                    !ocrResult?.detected_date
+                      ? "Date not detected - please verify"
+                      : ""
+                  }
+                  style={
+                    !ocrResult?.detected_date
+                      ? { borderColor: "#ff9800", borderWidth: "2px" }
+                      : {}
+                  }
                 />
               </div>
               {!ocrResult?.detected_date && manualExpense.date && (
-                <div style={{ fontSize: "12px", color: "#ff9800", marginTop: "-10px", marginBottom: "10px" }}>
+                <div
+                  style={{
+                    fontSize: "12px",
+                    color: "#ff9800",
+                    marginTop: "-10px",
+                    marginBottom: "10px",
+                  }}
+                >
                   ⚠️ Date not found on receipt
                 </div>
               )}
@@ -965,7 +1088,11 @@ export default function BudgetPage() {
                   Confidence:
                   <span
                     className={`confidence-badge ${
-                      scanConfidence >= 80 ? "high" : scanConfidence >= 60 ? "medium" : "low"
+                      scanConfidence >= 80
+                        ? "high"
+                        : scanConfidence >= 60
+                          ? "medium"
+                          : "low"
                     }`}
                   >
                     {scanConfidence}%
@@ -978,13 +1105,16 @@ export default function BudgetPage() {
               <button className="btn-confirm" onClick={addExpense}>
                 ✓ Confirm & Save
               </button>
-              <button className="btn-cancel" onClick={() => {
-                setShowReceiptModal(false);
-                setScanMessage("");
-                setReceiptFile(null);
-                setReceiptPreview(null);
-                if (fileInputRef.current) fileInputRef.current.value = "";
-              }}>
+              <button
+                className="btn-cancel"
+                onClick={() => {
+                  setShowReceiptModal(false);
+                  setScanMessage("");
+                  setReceiptFile(null);
+                  setReceiptPreview(null);
+                  if (fileInputRef.current) fileInputRef.current.value = "";
+                }}
+              >
                 ✕ Cancel
               </button>
             </div>
@@ -998,13 +1128,19 @@ export default function BudgetPage() {
           <div className="modal">
             <div className="modal-header">
               <h3>⚠️ Error</h3>
-              <button className="modal-close" onClick={() => setShowValidationModal(false)}>
+              <button
+                className="modal-close"
+                onClick={() => setShowValidationModal(false)}
+              >
                 ✕
               </button>
             </div>
             <p style={{ color: "#333", fontSize: "16px" }}>{validationError}</p>
             <div className="modal-actions">
-              <button className="btn-confirm" onClick={() => setShowValidationModal(false)}>
+              <button
+                className="btn-confirm"
+                onClick={() => setShowValidationModal(false)}
+              >
                 OK
               </button>
             </div>

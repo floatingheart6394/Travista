@@ -13,30 +13,30 @@ export default function LoginPage() {
   const navigate = useNavigate();
 
   const handleLogin = async () => {
-  setError("");
+    setError("");
 
-  try {
-    const response = await fetch("http://localhost:8000/auth/login", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email, password }),
-    });
+    try {
+      const response = await fetch("http://localhost:8000/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password }),
+      });
 
-    const data = await response.json();
+      const data = await response.json();
 
-    if (!response.ok) {
-      setError(data.detail || "Invalid email or password");
-      return;
+      if (!response.ok) {
+        setError(data.detail || "Invalid email or password");
+        return;
+      }
+
+      localStorage.setItem("access_token", data.access_token);
+
+      navigate("/planner");
+    } catch (err) {
+      console.error(err);
+      setError("Server error. Please try again.");
     }
-
-    localStorage.setItem("access_token", data.access_token);
-
-    navigate("/planner");
-  } catch (err) {
-    console.error(err);
-    setError("Server error. Please try again.");
-  }
-};
+  };
 
   return (
     <div className="login-page">
