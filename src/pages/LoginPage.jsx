@@ -30,7 +30,6 @@ export default function LoginPage() {
       }
 
       localStorage.setItem("access_token", data.access_token);
-
       navigate("/planner");
     } catch (err) {
       console.error(err);
