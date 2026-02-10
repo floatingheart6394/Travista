@@ -1,7 +1,7 @@
 from datetime import datetime, timezone
 from jose import jwt
 
-from app.core.config import SECRET_KEY, ALGORITHM, ACCESS_TOKEN_EXPIRE_DELTA
+from .config import SECRET_KEY, ALGORITHM, ACCESS_TOKEN_EXPIRE_DELTA
 
 
 def create_access_token(data: dict) -> str:
