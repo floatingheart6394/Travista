@@ -6,8 +6,8 @@ except ImportError:
         from langchain.schema import Document  # type: ignore
     except ImportError:
         from langchain_core.schema import Document  # type: ignore
-from app.rag.embedder import get_embedder
-from app.rag.loader import load_documents
+from .embedder import get_embedder
+from .loader import load_documents
 from pathlib import Path
 
 _vector_store = None
