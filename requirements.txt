@@ -1,16 +1,16 @@
-fastapi==0.110.3
-uvicorn[standard]==0.29.0
-sqlalchemy==2.0.30
-python-dotenv==1.0.1
-passlib==1.7.4
-python-jose[cryptography]==3.3.0
-python-multipart==0.0.9
-email-validator==2.1.1
+fastapi
+uvicorn[standard]
+sqlalchemy
+python-dotenv
+passlib
+python-jose[cryptography]
+python-multipart
+email-validator
 
-langchain-community==0.2.7
-langchain-openai==0.1.20
-openai==1.35.10
+langchain-community
+langchain-openai
+openai
 
-faiss-cpu==1.9.0.post1
-pytesseract==0.3.10
-pillow==11.1.0
+faiss-cpu
+pytesseract
+pillow
