@@ -2,10 +2,10 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 
-from app.database import get_db
-from app.models.trip import Trip
-from app.schemas.trip import TripCreate, TripResponse
-from app.dependencies.auth import get_current_user_id
+from ..database import get_db
+from ..models.trip import Trip
+from ..schemas.trip import TripCreate, TripResponse
+from ..dependencies.auth import get_current_user_id
 
 router = APIRouter(prefix="/trip", tags=["Trip"])
 

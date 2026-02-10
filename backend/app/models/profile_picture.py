@@ -1,5 +1,5 @@
 from sqlalchemy import Column, Integer, DateTime, ForeignKey, Text, text
-from app.database import Base
+from ..database import Base
 
 class ProfilePicture(Base):
     __tablename__ = "profile_pictures"

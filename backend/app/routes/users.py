@@ -2,11 +2,11 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, delete
 
-from app.database import get_db
-from app.models.user import User
-from app.models.profile_picture import ProfilePicture
-from app.dependencies.auth import get_current_user_id
-from app.schemas.user import ProfileResponse, UpdateProfileRequest
+from ..database import get_db
+from ..models.user import User
+from ..models.profile_picture import ProfilePicture
+from ..dependencies.auth import get_current_user_id
+from ..schemas.user import ProfileResponse, UpdateProfileRequest
 
 router = APIRouter(
     prefix="/users",

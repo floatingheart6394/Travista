@@ -3,7 +3,7 @@ from sqlalchemy.dialects.postgresql import ARRAY
 from sqlalchemy.sql import func
 from sqlalchemy.types import DateTime
 
-from app.database import Base
+from ..database import Base
 
 class Trip(Base):
     __tablename__ = "trips"

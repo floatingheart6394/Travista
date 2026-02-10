@@ -2,10 +2,10 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
-from app.database import get_db
-from app.models.todo import Todo
-from app.schemas.todo import TodoCreate, TodoUpdate, TodoOut
-from app.dependencies.auth import get_current_user_id
+from ..database import get_db
+from ..models.todo import Todo
+from ..schemas.todo import TodoCreate, TodoUpdate, TodoOut
+from ..dependencies.auth import get_current_user_id
 
 router = APIRouter(
     prefix="/todos",
