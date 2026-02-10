@@ -24,11 +24,31 @@ app.add_middleware(
 @app.on_event("startup")
 async def startup():
     async with engine.begin() as conn:
+        # Create schemas first
+        await conn.execute(text("CREATE SCHEMA IF NOT EXISTS auth"))
+        await conn.execute(text("CREATE SCHEMA IF NOT EXISTS trip"))
+        await conn.execute(text("CREATE SCHEMA IF NOT EXISTS expense"))
+        await conn.execute(text("CREATE SCHEMA IF NOT EXISTS todo"))
+        await conn.execute(text("CREATE SCHEMA IF NOT EXISTS emergency_contact"))
+        await conn.execute(text("CREATE SCHEMA IF NOT EXISTS planner"))
+        await conn.execute(text("CREATE SCHEMA IF NOT EXISTS users"))
+
+        # Create tables
         await conn.run_sync(Base.metadata.create_all)
-        await conn.execute(text("ALTER TABLE IF EXISTS trip.trips ADD COLUMN IF NOT EXISTS start_date DATE"))
-        await conn.execute(text("ALTER TABLE IF EXISTS trip.trips ADD COLUMN IF NOT EXISTS end_date DATE"))
-        await conn.execute(text("ALTER TABLE IF EXISTS trip.trips ADD COLUMN IF NOT EXISTS itinerary TEXT"))
-        await conn.execute(text("ALTER TABLE IF EXISTS auth.profile_pictures ALTER COLUMN image_url TYPE TEXT"))
+
+        # Schema updates
+        await conn.execute(text(
+            "ALTER TABLE IF EXISTS trip.trips ADD COLUMN IF NOT EXISTS start_date DATE"
+        ))
+        await conn.execute(text(
+            "ALTER TABLE IF EXISTS trip.trips ADD COLUMN IF NOT EXISTS end_date DATE"
+        ))
+        await conn.execute(text(
+            "ALTER TABLE IF EXISTS trip.trips ADD COLUMN IF NOT EXISTS itinerary TEXT"
+        ))
+        await conn.execute(text(
+            "ALTER TABLE IF EXISTS auth.profile_pictures ALTER COLUMN image_url TYPE TEXT"
+        ))
 
     if os.getenv("ENABLE_RAG", "true").lower() == "true":
         try:
@@ -37,7 +57,6 @@ async def startup():
             print(f"⚠ RAG initialization skipped: {e}")
     else:
         print("ℹ RAG initialization disabled via ENABLE_RAG=false")
-
 
 app.include_router(auth.router)
 app.include_router(users.router)
