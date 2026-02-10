@@ -2,15 +2,14 @@ import os
 from dotenv import load_dotenv
 load_dotenv()
 
-
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.rag.pipeline import initialize_rag
-
-
-from app.database import engine, Base
-from app.routes import auth, users, todo, emergency_contact, ai_assistant, planner, expense, trip
 from sqlalchemy import text
+
+from .rag.pipeline import initialize_rag
+from .database import engine, Base
+from .routes import auth, users, todo, emergency_contact, ai_assistant, planner, expense, trip
+
 
 app = FastAPI(title="Travista Backend")
 
@@ -26,19 +25,19 @@ app.add_middleware(
 async def startup():
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
-        # Lightweight schema patching for dev: ensure trip dates exist even if tables already created
         await conn.execute(text("ALTER TABLE IF EXISTS trip.trips ADD COLUMN IF NOT EXISTS start_date DATE"))
         await conn.execute(text("ALTER TABLE IF EXISTS trip.trips ADD COLUMN IF NOT EXISTS end_date DATE"))
         await conn.execute(text("ALTER TABLE IF EXISTS trip.trips ADD COLUMN IF NOT EXISTS itinerary TEXT"))
-        # Allow full data URLs for profile pictures
         await conn.execute(text("ALTER TABLE IF EXISTS auth.profile_pictures ALTER COLUMN image_url TYPE TEXT"))
+
     if os.getenv("ENABLE_RAG", "true").lower() == "true":
         try:
-            initialize_rag("app/rag/data")
+            initialize_rag("rag/data")
         except Exception as e:
             print(f"⚠ RAG initialization skipped: {e}")
     else:
         print("ℹ RAG initialization disabled via ENABLE_RAG=false")
+
 
 app.include_router(auth.router)
 app.include_router(users.router)
@@ -48,6 +47,7 @@ app.include_router(ai_assistant.router)
 app.include_router(planner.router)
 app.include_router(expense.router)
 app.include_router(trip.router)
+
 
 @app.get("/")
 async def root():
