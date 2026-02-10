@@ -1,4 +1,4 @@
-from app.rag.vector_store import get_vector_store
+from .vector_store import get_vector_store
 
 def retrieve_context(question: str, k: int = 3) -> str:
     """
