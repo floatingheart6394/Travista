@@ -29,7 +29,7 @@ async def startup():
         await conn.execute(text("CREATE SCHEMA IF NOT EXISTS trip"))
         await conn.execute(text("CREATE SCHEMA IF NOT EXISTS expense"))
         await conn.execute(text("CREATE SCHEMA IF NOT EXISTS todo"))
-        await conn.execute(text("CREATE SCHEMA IF NOT EXISTS emergency_contact"))
+        await conn.execute(text("CREATE SCHEMA IF NOT EXISTS emergency"))
         await conn.execute(text("CREATE SCHEMA IF NOT EXISTS planner"))
         await conn.execute(text("CREATE SCHEMA IF NOT EXISTS users"))
 
