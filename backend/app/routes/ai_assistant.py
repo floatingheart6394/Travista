@@ -1,13 +1,18 @@
 from fastapi import APIRouter, UploadFile, File, Security, Depends
-from app.schemas.ai_assistant import (
+from ..schemas.ai_assistant import (
     AIChatRequest, AIChatResponse, AIRAGRequest, AIRAGResponse,
     OCRResponse, OCRWithRAGRequest, OCRWithRAGResponse, TravelDocumentAnalysis,
     ReceiptScanResponse
 )
-from app.core.openai_client import ask_openai, ask_openai_long
-from app.rag.pipeline import rag_pipeline
-from app.ocr.ocr_service import extract_text_from_image, extract_travel_info, ocr_with_rag, extract_receipt_data
-from app.dependencies.auth import get_current_user_id
+from ..core.openai_client import ask_openai, ask_openai_long
+from ..rag.pipeline import rag_pipeline
+from ..ocr.ocr_service import (
+    extract_text_from_image,
+    extract_travel_info,
+    ocr_with_rag,
+    extract_receipt_data
+)
+from ..dependencies.auth import get_current_user_id
 
 router = APIRouter(
     prefix="/ai",
