@@ -1,4 +1,4 @@
-from app.core.openai_client import ask_openai
+from ..core.openai_client import ask_openai
 
 def generate_answer(question: str, context: str) -> str:
     """
