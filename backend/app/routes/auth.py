@@ -3,11 +3,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 
-from app.database import get_db
-from app.models.user import User
-from app.schemas.user import SignupRequest, LoginRequest
-from app.core.security import hash_password, verify_password
-from app.core.jwt import create_access_token
+from ..database import get_db
+from ..models.user import User
+from ..schemas.user import SignupRequest, LoginRequest
+from ..core.security import hash_password, verify_password
+from ..core.jwt import create_access_token
+
 
 router = APIRouter(
     prefix="/auth",
