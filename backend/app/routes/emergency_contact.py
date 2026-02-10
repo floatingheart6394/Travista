@@ -2,14 +2,13 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func
 
-from app.database import get_db
-from app.models.emergency_contact import EmergencyContact
-from app.schemas.emergency_contact import (
+from ..database import get_db
+from ..models.emergency_contact import EmergencyContact
+from ..schemas.emergency_contact import (
     EmergencyContactCreate,
     EmergencyContactOut,
 )
-from app.dependencies.auth import get_current_user_id
-
+from ..dependencies.auth import get_current_user_id
 
 router = APIRouter(
     prefix="/emergency-contacts",
