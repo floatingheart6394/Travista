@@ -1,7 +1,7 @@
 from fastapi import APIRouter
 from pydantic import BaseModel, Field
 from typing import List
-from app.schemas.planner import TripPlannerRequest, TripPlannerResponse
+from .schemas.planner import TripPlannerRequest, TripPlannerResponse
 
 class TripPlannerRequest(BaseModel):
     destination: str = Field(..., min_length=1)
