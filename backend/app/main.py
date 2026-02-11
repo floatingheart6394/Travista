@@ -32,6 +32,7 @@ async def startup():
         await conn.execute(text("CREATE SCHEMA IF NOT EXISTS emergency"))
         await conn.execute(text("CREATE SCHEMA IF NOT EXISTS planner"))
         await conn.execute(text("CREATE SCHEMA IF NOT EXISTS users"))
+        await conn.execute(text("CREATE SCHEMA IF NOT EXISTS budget"))
 
         # Create tables
         await conn.run_sync(Base.metadata.create_all)
