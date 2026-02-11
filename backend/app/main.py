@@ -21,33 +21,21 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+
 @app.on_event("startup")
 async def startup():
     async with engine.begin() as conn:
-        # Create schemas first
+        # Create required schemas
         await conn.execute(text("CREATE SCHEMA IF NOT EXISTS auth"))
         await conn.execute(text("CREATE SCHEMA IF NOT EXISTS trip"))
         await conn.execute(text("CREATE SCHEMA IF NOT EXISTS todo"))
         await conn.execute(text("CREATE SCHEMA IF NOT EXISTS emergency"))
         await conn.execute(text("CREATE SCHEMA IF NOT EXISTS budget"))
 
-        # Create tables
+        # Create tables based on SQLAlchemy models
         await conn.run_sync(Base.metadata.create_all)
 
-        # Schema updates
-        await conn.execute(text(
-            "ALTER TABLE IF EXISTS trip.trips ADD COLUMN IF NOT EXISTS start_date DATE"
-        ))
-        await conn.execute(text(
-            "ALTER TABLE IF EXISTS trip.trips ADD COLUMN IF NOT EXISTS end_date DATE"
-        ))
-        await conn.execute(text(
-            "ALTER TABLE IF EXISTS trip.trips ADD COLUMN IF NOT EXISTS itinerary TEXT"
-        ))
-        await conn.execute(text(
-            "ALTER TABLE IF EXISTS auth.profile_pictures ALTER COLUMN image_url TYPE TEXT"
-        ))
-
+    # Initialize RAG (if enabled)
     if os.getenv("ENABLE_RAG", "true").lower() == "true":
         try:
             initialize_rag("rag/data")
@@ -56,6 +44,8 @@ async def startup():
     else:
         print("ℹ RAG initialization disabled via ENABLE_RAG=false")
 
+
+# Include API routes
 app.include_router(auth.router)
 app.include_router(users.router)
 app.include_router(todo.router)
