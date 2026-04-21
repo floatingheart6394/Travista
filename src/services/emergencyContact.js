@@ -1,4 +1,4 @@
-const API_BASE = import.meta.env.VITE_API_BASE_URL;
+const BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
 function getAuthHeaders() {
   const token = localStorage.getItem("access_token");
@@ -9,7 +9,7 @@ function getAuthHeaders() {
 }
 
 export async function fetchEmergencyContacts() {
-  const res = await fetch(`${API_BASE}/emergency-contacts/`, {
+  const res = await fetch(`${BASE_URL}/emergency-contacts/`, {
     headers: getAuthHeaders(),
   });
 
@@ -21,7 +21,7 @@ export async function fetchEmergencyContacts() {
 }
 
 export async function addEmergencyContact(data) {
-  const res = await fetch(`${API_BASE}/emergency-contacts/`, {
+  const res = await fetch(`${BASE_URL}/emergency-contacts/`, {
     method: "POST",
     headers: getAuthHeaders(),
     body: JSON.stringify(data),
@@ -37,7 +37,7 @@ export async function addEmergencyContact(data) {
 }
 
 export async function deleteEmergencyContact(id) {
-  const res = await fetch(`${API_BASE}/emergency-contacts/${id}`, {
+  const res = await fetch(`${BASE_URL}/emergency-contacts/${id}`, {
     method: "DELETE",
     headers: getAuthHeaders(),
   });
