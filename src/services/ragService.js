@@ -1,4 +1,4 @@
-const API_URL = "http://localhost:8000";
+const BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
 const getAuthHeaders = () => ({
   "Content-Type": "application/json",
@@ -23,7 +23,7 @@ const handleApiError = async (response) => {
 
 export const chatWithRAG = async (question) => {
   try {
-    const response = await fetch(`${API_URL}/ai/rag-chat`, {
+    const response = await fetch(`${BASE_URL}/ai/rag-chat`, {
       method: "POST",
       headers: getAuthHeaders(),
       body: JSON.stringify({ question }),
@@ -47,7 +47,7 @@ export const chatWithRAG = async (question) => {
 
 export const chatWithoutRAG = async (message) => {
   try {
-    const response = await fetch(`${API_URL}/ai/chat`, {
+    const response = await fetch(`${BASE_URL}/ai/chat`, {
       method: "POST",
       headers: getAuthHeaders(),
       body: JSON.stringify({ message }),
@@ -74,7 +74,7 @@ export const ocrExtractText = async (imageFile) => {
     const formData = new FormData();
     formData.append("file", imageFile);
 
-    const response = await fetch(`${API_URL}/ai/ocr`, {
+    const response = await fetch(`${BASE_URL}/ai/ocr`, {
       method: "POST",
       headers: {
         Authorization: `Bearer ${localStorage.getItem("access_token")}`,
@@ -109,7 +109,7 @@ export const ocrExtractText = async (imageFile) => {
  */
 export const ocrChatWithRAG = async (ocrText) => {
   try {
-    const response = await fetch(`${API_URL}/ai/ocr-with-rag`, {
+    const response = await fetch(`${BASE_URL}/ai/ocr-with-rag`, {
       method: "POST",
       headers: getAuthHeaders(),
       body: JSON.stringify({ ocr_text: ocrText }),
@@ -144,7 +144,7 @@ export const analyzeTravelDocument = async (imageFile) => {
     const formData = new FormData();
     formData.append("file", imageFile);
 
-    const response = await fetch(`${API_URL}/ai/analyze-travel-document`, {
+    const response = await fetch(`${BASE_URL}/ai/analyze-travel-document`, {
       method: "POST",
       headers: {
         Authorization: `Bearer ${localStorage.getItem("access_token")}`,
