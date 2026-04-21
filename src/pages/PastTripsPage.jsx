@@ -22,7 +22,7 @@ function PastTripsPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  const API_BASE = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000";
+  const BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
   // Fetch past trips with itineraries
   const fetchPastTrips = async () => {
@@ -31,7 +31,7 @@ function PastTripsPage() {
     try {
       const token = localStorage.getItem("access_token");
       if (!token) throw new Error("Authentication token not found");
-      const response = await fetch(`${API_BASE}/trip/past/all`, {
+      const response = await fetch(`${BASE_URL}/trip/past/all`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (!response.ok) {
@@ -55,7 +55,7 @@ function PastTripsPage() {
     try {
       const token = localStorage.getItem("access_token");
       if (!token) throw new Error("Authentication token not found");
-      const response = await fetch(`${API_BASE}/budget/all-expenses`, {
+      const response = await fetch(`${BASE_URL}/budget/all-expenses`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (!response.ok) {
