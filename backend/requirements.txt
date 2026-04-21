@@ -10,7 +10,7 @@ asyncpg
 langchain-community
 langchain-openai
 openai
-psycopg2-binary
+asyncpg
 faiss-cpu
 pytesseract
 pillow
