@@ -26,7 +26,7 @@ ChartJS.register(
   PointElement
 );
 
-const API_URL = import.meta.env.VITE_API_BASE_URL;
+const BASE_URL = import.meta.env.VITE_API_BASE_URL;
 const CATEGORIES = [
   { key: "food", label: "Food & Dining", emoji: "🍽️", color: "#E60000" },
   { key: "stay", label: "Accommodation", emoji: "🏨", color: "#0099CC" },
@@ -77,7 +77,7 @@ export default function BudgetPage() {
   async function loadBudgetData() {
     try {
       const token = localStorage.getItem("access_token");
-      const tripRes = await fetch(`${API_URL}/trip/active`, {
+      const tripRes = await fetch(`${BASE_URL}/trip/active`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (!tripRes.ok) return;
@@ -133,7 +133,7 @@ export default function BudgetPage() {
   async function fetchExpenses(tripId) {
     if (!tripId) return;
     try {
-      const res = await fetch(`${API_URL}/budget/expenses/?trip_id=${tripId}`, {
+      const res = await fetch(`${BASE_URL}/budget/expenses/?trip_id=${tripId}`, {
         headers: {
           Authorization: `Bearer ${localStorage.getItem("access_token")}`,
         },
@@ -365,7 +365,7 @@ export default function BudgetPage() {
   // Delete expense
   async function deleteExpense(id) {
     try {
-      const res = await fetch(`${API_URL}/budget/expenses/${id}`, {
+      const res = await fetch(`${BASE_URL}/budget/expenses/${id}`, {
         method: "DELETE",
         headers: {
           Authorization: `Bearer ${localStorage.getItem("access_token")}`,
