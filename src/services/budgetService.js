@@ -3,7 +3,7 @@
  * Including receipt scanning with OCR and category detection
  */
 
-const API_URL = import.meta.env.VITE_API_BASE_URL;
+const BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
 /**
  * Scan a receipt image and extract expense data
@@ -15,7 +15,7 @@ export async function scanReceipt(imageFile) {
     const formData = new FormData();
     formData.append("file", imageFile);
 
-    const response = await fetch(`${API_URL}/ai/scan-receipt`, {
+    const response = await fetch(`${BASE_URL}/ai/scan-receipt`, {
       method: "POST",
       body: formData,
       headers: {
@@ -46,7 +46,7 @@ export async function scanReceipt(imageFile) {
  */
 export async function addExpense(expenseData) {
   try {
-    const response = await fetch(`${API_URL}/budget/expense`, {
+    const response = await fetch(`${BASE_URL}/budget/expense`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -82,7 +82,7 @@ export async function addExpense(expenseData) {
 export async function fetchExpenses(tripId) {
   try {
     const response = await fetch(
-      `${API_URL}/budget/expenses/?trip_id=${tripId}`,
+      `${BASE_URL}/budget/expenses/?trip_id=${tripId}`,
       {
         headers: {
           Authorization: `Bearer ${localStorage.getItem("access_token")}`,
@@ -115,7 +115,7 @@ export async function fetchExpenses(tripId) {
  */
 export async function deleteExpense(expenseId) {
   try {
-    const response = await fetch(`${API_URL}/budget/expense/${expenseId}`, {
+    const response = await fetch(`${BASE_URL}/budget/expense/${expenseId}`, {
       method: "DELETE",
       headers: {
         Authorization: `Bearer ${localStorage.getItem("access_token")}`,
