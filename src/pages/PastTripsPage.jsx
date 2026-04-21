@@ -79,7 +79,7 @@ function PastTripsPage() {
     try {
       const token = localStorage.getItem("access_token");
       if (!token) throw new Error("Authentication token not found");
-      const response = await fetch(`${API_BASE}/todos/`, {
+      const response = await fetch(`${BASE_URL}/todos/`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (!response.ok) {
