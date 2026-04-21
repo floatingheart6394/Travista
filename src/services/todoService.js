@@ -1,4 +1,4 @@
-const API_URL = "http://localhost:8000";
+const BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
 const authHeaders = () => ({
   "Content-Type": "application/json",
@@ -6,14 +6,14 @@ const authHeaders = () => ({
 });
 
 export const fetchTodos = async () => {
-  const res = await fetch(`${API_URL}/todos`, {
+  const res = await fetch(`${BASE_URL}/todos`, {
     headers: authHeaders(),
   });
   return res.json();
 };
 
 export const createTodo = async (todo) => {
-  const res = await fetch(`${API_URL}/todos`, {
+  const res = await fetch(`${BASE_URL}/todos`, {
     method: "POST",
     headers: authHeaders(),
     body: JSON.stringify(todo),
@@ -22,7 +22,7 @@ export const createTodo = async (todo) => {
 };
 
 export const updateTodo = async (id, updates) => {
-  await fetch(`${API_URL}/todos/${id}`, {
+  await fetch(`${BASE_URL}/todos/${id}`, {
     method: "PATCH",
     headers: authHeaders(),
     body: JSON.stringify(updates),
@@ -30,7 +30,7 @@ export const updateTodo = async (id, updates) => {
 };
 
 export const deleteTodo = async (id) => {
-  await fetch(`${API_URL}/todos/${id}`, {
+  await fetch(`${BASE_URL}/todos/${id}`, {
     method: "DELETE",
     headers: authHeaders(),
   });
