@@ -1,4 +1,4 @@
-const API_URL = import.meta.env.VITE_API_BASE_URL;
+const BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
 function authHeaders(json = false) {
   const headers = {};
@@ -9,7 +9,7 @@ function authHeaders(json = false) {
 }
 
 export async function fetchProfile() {
-  const res = await fetch(`${API_URL}/users/me`, {
+  const res = await fetch(`${BASE_URL}/users/me`, {
     method: "GET",
     headers: authHeaders(),
   });
@@ -20,7 +20,7 @@ export async function fetchProfile() {
 }
 
 export async function updateProfile(payload) {
-  const res = await fetch(`${API_URL}/users/me`, {
+  const res = await fetch(`${BASE_URL}/users/me`, {
     method: "PUT",
     headers: authHeaders(true),
     body: JSON.stringify(payload),
