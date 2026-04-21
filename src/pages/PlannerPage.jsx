@@ -19,7 +19,7 @@ const STYLES = [
   "Photography",
   "History",
 ];
-const API_URL = import.meta.env.VITE_API_BASE_URL;
+const BASE_URL = import.meta.env.VITE_API_BASE_URL;
 const PLANNER_CACHE_KEY = "travista.planner.cache";
 
 // Itinerary Display Component
@@ -343,7 +343,7 @@ export default function PlannerPage() {
       setLoading(true);
       
       // First, save the trip
-      await fetch(`${API_URL}/trip/`, {
+      await fetch(`${BASE_URL}/trip/`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -399,7 +399,7 @@ Morning: [activity details]
 
 FINAL CHECK: Before you finish, verify you have provided content for Day 1 through Day ${payload.duration}. Do not submit incomplete itineraries.`;
 
-      const res = await fetch(`${API_URL}/ai/chat`, {
+      const res = await fetch(`${BASE_URL}/ai/chat`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -417,7 +417,7 @@ FINAL CHECK: Before you finish, verify you have provided content for Day 1 throu
 
       // Save itinerary to backend
       try {
-        await fetch(`${API_URL}/trip/`, {
+        await fetch(`${BASE_URL}/trip/`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
