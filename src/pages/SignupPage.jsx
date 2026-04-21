@@ -2,6 +2,7 @@ import SignUpArt from "../assets/SIGNUP.png";
 import { Link, useNavigate } from "react-router-dom";
 import { useState } from "react";
 import { MdVisibility, MdVisibilityOff } from "react-icons/md";
+const BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
 export default function SignupPage() {
   const [showPwd1, setShowPwd1] = useState(false);
@@ -26,7 +27,7 @@ export default function SignupPage() {
     }
 
     try {
-      const response = await fetch("http://localhost:8000/auth/signup", {
+      const response = await fetch(`${BASE_URL}/auth/signup`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name, email, password }),
