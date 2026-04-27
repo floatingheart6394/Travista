@@ -32,7 +32,7 @@ async def chat_with_ai(
         
         if is_itinerary:
             # Use extended token limit for comprehensive itineraries
-            reply = ask_openai_long(payload.message, max_tokens=2000)
+            reply = ask_openai_long(payload.message, max_tokens=800)
         else:
             # Use normal token limit for regular chat
             reply = ask_openai(payload.message)
